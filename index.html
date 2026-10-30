@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>東京ターザン</title>
+<meta name="description" content="実在の東京都心 (PLATEAU 3D都市モデル) を、ロープ1本でビルからビルへ飛び移るブラウザ3Dアクション">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<canvas id="speedlines"></canvas>
+<div id="flash"></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="crosshair"><div></div></div>
+  <div id="topbar">
+    <div id="timer"></div>
+    <div id="rings"></div>
+    <div id="dex"></div>
+  </div>
+  <div id="nav"><div id="navArrow">▲</div><div id="navText"></div></div>
+  <div id="area"></div>
+  <div id="toast"></div>
+  <div id="combo"></div>
+  <div id="floaters"></div>
+  <div id="stats">
+    <div><span id="spd">0</span><small>km/h</small></div>
+    <div><span id="alt">0</span><small>m</small></div>
+    <div class="score"><span id="score">0</span><small>pt</small></div>
+  </div>
+  <canvas id="minimap" width="200" height="200"></canvas>
+  <div id="hint"></div>
+  <div id="countdown"></div>
+</div>
+
+<!-- スマホの操作 -->
+<div id="touch" class="hidden">
+  <div id="stick"><div id="knob"></div></div>
+  <div id="tbtns">
+    <button id="tRope">ロープ</button>
+    <button id="tZip">ぐいっ</button>
+    <button id="tJump">ジャンプ</button>
+    <button id="tReel">巻く</button>
+  </div>
+  <button id="tPause">❚❚</button>
+</div>
+
+<!-- タイトル -->
+<div id="title" class="screen">
+  <div class="panel">
+    <h1>東京ターザン<small>TOKYO TARZAN</small></h1>
+    <p class="lead">実在の東京都心のビルからビルへ、ロープ1本で飛び移れ。</p>
+    <div class="row">
+      <span class="label">時間帯</span>
+      <div class="seg" id="tod">
+        <button data-v="day">昼</button><button data-v="dusk" class="on">夕暮れ</button><button data-v="night">夜</button>
+      </div>
+    </div>
+    <h2>配達ミッション</h2>
+    <div id="missionList"></div>
+    <h2>フリーターザン</h2>
+    <button class="mode" id="freeBtn"><b>ビル図鑑あつめ</b><span>霞が関ビルの屋上から自由に飛び回る。名前のあるビルにロープを掛けると図鑑に載る（<em id="dexCount">0</em>）</span></button>
+    <div class="row small">
+      <button class="link" id="howBtn">あそびかた</button>
+      <button class="link" id="dexBtn">ビル図鑑を見る</button>
+    </div>
+    <p class="credit">ビルの形と高さ: 国土交通省 Project PLATEAU（東京都23区 2020年度）／ 首都高の線: © OpenStreetMap contributors。
+      データは <a href="https://github.com/techgymjp/shutoko" target="_blank" rel="noopener">首都高グランプリ</a> のコースデータから作成</p>
+  </div>
+</div>
+
+<div id="how" class="screen hidden">
+  <div class="panel">
+    <h2>あそびかた</h2>
+    <table class="keys">
+      <tr><th>視点</th><td>マウス（画面をクリックで固定）</td><td>右半分をドラッグ</td></tr>
+      <tr><th>ロープ</th><td>左クリック 押している間ぶら下がる</td><td>ロープ ボタン</td></tr>
+      <tr><th>ぐいっ（引き寄せ）</th><td>Space（ぶら下がり中）／ E</td><td>ぐいっ</td></tr>
+      <tr><th>ジャンプ</th><td>Space（立っているとき）</td><td>ジャンプ</td></tr>
+      <tr><th>巻き取る／のばす</th><td>Shift・右クリック ／ Q</td><td>巻く</td></tr>
+      <tr><th>移動・こぐ</th><td>W A S D</td><td>左のスティック</td></tr>
+      <tr><th>やり直し</th><td>R</td><td>—</td></tr>
+      <tr><th>一時停止／消音</th><td>Esc ／ M</td><td>❚❚</td></tr>
+    </table>
+    <ul class="tips">
+      <li>照準が<b class="g">緑</b>になったら、そこにロープが届く（最大150m）。照準の近くに壁がなくても少しなら自動で狙う</li>
+      <li>振り子の<b>いちばん下を過ぎて上がり始めたところ</b>で手を離すと「ナイスリリース！」で加速</li>
+      <li>地面に足を着けずにロープをつなぐほど <b>コンボ</b> が増えて得点が上がる。屋上や首都高の高架の上なら1秒までは着地してもコンボが続く</li>
+      <li>速いまま壁すれすれを抜けると「ニアミス」ボーナス。ぶつかると減速する</li>
+      <li>ぶら下がりながら W で前にこぐと振り子が大きくなる。高いビルに掛けたら Shift で巻き取って上へ</li>
+      <li>名前のあるビル（PLATEAU に名前が入っている建物）にロープを掛けると、ビル図鑑に載る</li>
+    </ul>
+    <button class="primary" data-close>もどる</button>
+  </div>
+</div>
+
+<div id="dexScreen" class="screen hidden">
+  <div class="panel">
+    <h2>ビル図鑑 <small id="dexTotal"></small></h2>
+    <div id="dexList"></div>
+    <button class="primary" data-close>もどる</button>
+  </div>
+</div>
+
+<div id="pause" class="screen hidden">
+  <div class="panel narrow">
+    <h2>一時停止</h2>
+    <button class="primary" id="resumeBtn">つづける</button>
+    <button class="mode" id="retryBtn"><b>はじめから</b></button>
+    <button class="mode" id="quitBtn"><b>タイトルへ</b></button>
+  </div>
+</div>
+
+<div id="result" class="screen hidden">
+  <div class="panel narrow">
+    <h2 id="resTitle">配達完了！</h2>
+    <div id="resStars"></div>
+    <div id="resBody"></div>
+    <button class="primary" id="resRetry">もう一度</button>
+    <button class="mode" id="resQuit"><b>タイトルへ</b></button>
+  </div>
+</div>
+
+<div id="loading" class="screen"><div class="panel narrow"><h2>東京を組み立て中…</h2><p>PLATEAU のビル 約2.9万棟</p></div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

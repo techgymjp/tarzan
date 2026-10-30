@@ -1,0 +1,181 @@
+// PLATEAU では箱になってしまう (または首都高グランプリで手作りモデルに置き換えて除いた) 名所を手作りする
+import * as THREE from '../vendor/three.module.min.js';
+import { ll } from './city.js';
+
+function latticeTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, 128, 128);
+  g.strokeStyle = '#fff';
+  g.lineWidth = 14;
+  g.strokeRect(0, 0, 128, 128);
+  g.lineWidth = 10;
+  g.beginPath();
+  g.moveTo(0, 0); g.lineTo(128, 128);
+  g.moveTo(128, 0); g.lineTo(0, 128);
+  g.moveTo(0, 64); g.lineTo(128, 64);
+  g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return t;
+}
+
+// 東京タワー (333m)。外から見えるトラスの4面 + 展望台。当たり判定は脚・胴・展望台の柱で近似
+export function addTokyoTower(scene, city) {
+  const [X, Z] = ll(35.65860, 139.74540);
+  const w = (y) => 92 * Math.pow(1 - y / 345, 2.1) + 2.2;
+  const group = new THREE.Group();
+  group.position.set(X, 0, Z);
+  const tex = latticeTexture();
+  const pos = [], uv = [], col = [];
+  const orange = new THREE.Color(0xff4b14), white = new THREE.Color(0xf4f1ea);
+  const STEP = 8;
+  for (let y = 0; y < 300; y += STEP) {
+    const y2 = y + STEP;
+    const a = w(y) / 2, b = w(y2) / 2;
+    const band = Math.floor(y / 27.5) % 2 === 0 ? orange : white;
+    for (let s = 0; s < 4; s++) {
+      const ang = s * Math.PI / 2;
+      const cs = Math.cos(ang), sn = Math.sin(ang);
+      const P = (x, yy, z) => [x * cs - z * sn, yy, x * sn + z * cs];
+      const p0 = P(-a, y, a), p1 = P(a, y, a), p2 = P(b, y2, b), p3 = P(-b, y2, b);
+      pos.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
+      const ua = a / 8, ub = b / 8, v0 = y / 10, v1 = y2 / 10;
+      uv.push(-ua, v0, ua, v0, ub, v1, -ua, v0, ub, v1, -ub, v1);
+      for (let k = 0; k < 6; k++) col.push(band.r, band.g, band.b);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const mat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, alphaTest: 0.5, transparent: false, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(g, mat);
+  group.add(mesh);
+  // 4隅の主柱 (遠くからでも形が分かるように)
+  const beamMat = new THREE.MeshLambertMaterial({ color: 0xff4b14 });
+  const beamWhite = new THREE.MeshLambertMaterial({ color: 0xf4f1ea });
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let y = 0; y < 300; y += STEP) {
+    const y2 = y + STEP, a = w(y) / 2, b = w(y2) / 2;
+    const m = Math.floor(y / 27.5) % 2 === 0 ? beamMat : beamWhite;
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const p0 = new THREE.Vector3(sx * a, y, sz * a), p1 = new THREE.Vector3(sx * b, y2, sz * b);
+      const len = p0.distanceTo(p1);
+      const r = Math.max(0.6, a * 0.06);
+      const c = new THREE.Mesh(new THREE.BoxGeometry(r * 2, len, r * 2), m);
+      c.position.copy(p0).add(p1).multiplyScalar(0.5);
+      c.quaternion.setFromUnitVectors(up, p1.clone().sub(p0).normalize());
+      group.add(c);
+    }
+  }
+  // 脚のアーチの下の白い梁
+  const deckMat = new THREE.MeshLambertMaterial({ color: 0xdedbd4 });
+  const glassMat = new THREE.MeshLambertMaterial({ color: 0x334455, emissive: 0x000000 });
+  const main = new THREE.Mesh(new THREE.CylinderGeometry(22, 24, 12, 8), glassMat);
+  main.position.y = 150; main.rotation.y = Math.PI / 8;
+  group.add(main);
+  const mainRoof = new THREE.Mesh(new THREE.CylinderGeometry(20, 22, 3, 8), deckMat);
+  mainRoof.position.y = 157.5; mainRoof.rotation.y = Math.PI / 8;
+  group.add(mainRoof);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 7, 8), glassMat);
+  top.position.y = 250; top.rotation.y = Math.PI / 8;
+  group.add(top);
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 2.2, 45, 6), new THREE.MeshLambertMaterial({ color: 0xff4b14 }));
+  ant.position.y = 300 + 22;
+  group.add(ant);
+  // フットタウン (足元のビル)
+  const ft = new THREE.Mesh(new THREE.BoxGeometry(90, 18, 70), deckMat);
+  ft.position.set(0, 9, 55);
+  group.add(ft);
+  scene.add(group);
+  // 夜のライトアップ
+  const light = new THREE.PointLight(0xff8a3c, 0, 450, 2);
+  light.position.set(X, 120, Z);
+  scene.add(light);
+
+  // 当たり判定
+  city.addBox(X, Z + 55, 90, 70, 0, 18, '東京タワー フットタウン');
+  const leg = 10;
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    for (let y = 0; y < 60; y += 15) {
+      const off = w(y + 7) / 2 - leg / 2;
+      city.addBox(X + sx * off, Z + sz * off, leg, leg, y, y + 15, '東京タワー');
+    }
+  }
+  for (let y = 60; y < 300; y += 12) {
+    const s = w(y + 6);
+    city.addBox(X, Z, s, s, y, y + 12, '東京タワー');
+  }
+  city.addBox(X, Z, 46, 46, 144, 159, '東京タワー メインデッキ');
+  city.addBox(X, Z, 3, 3, 300, 345, '東京タワー');
+  return { light, mats: [glassMat], glow: [beamMat, beamWhite, mat], pos: [X, Z] };
+}
+
+// 国会議事堂: 左右対称の本体 + 中央塔 (ピラミッド屋根)
+export function addDiet(scene, city) {
+  const [X, Z] = ll(35.67590, 139.74480);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  const stone = new THREE.MeshLambertMaterial({ color: 0xe6dfcf });
+  const roof = new THREE.MeshLambertMaterial({ color: 0x7f9a86 });
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
+  add(new THREE.BoxGeometry(206, 21, 70), stone, 0, 10.5, 0);
+  add(new THREE.BoxGeometry(60, 6, 88), stone, -70, 24, 0);
+  add(new THREE.BoxGeometry(60, 6, 88), stone, 70, 24, 0);
+  add(new THREE.BoxGeometry(34, 26, 34), stone, 0, 34, 0);
+  add(new THREE.BoxGeometry(26, 10, 26), stone, 0, 52, 0);
+  const pyr = add(new THREE.ConeGeometry(17, 14, 4), roof, 0, 64, 0);
+  pyr.rotation.y = Math.PI / 4;
+  scene.add(g);
+  city.addBox(X, Z, 206, 70, 0, 21, '国会議事堂');
+  city.addBox(X, Z, 34, 34, 0, 47, '国会議事堂 中央塔');
+  city.addBox(X, Z, 26, 26, 47, 57, '国会議事堂 中央塔');
+  city.addBox(X, Z, 12, 12, 57, 70, '国会議事堂 中央塔');
+}
+
+// 遠くに見える東京スカイツリー (634m)
+export function addSkytree(scene) {
+  const [X, Z] = ll(35.71010, 139.81070);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  const m = new THREE.MeshLambertMaterial({ color: 0xd8e2ea, fog: false });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(5, 34, 500, 12), m);
+  body.position.y = 250;
+  g.add(body);
+  const d1 = new THREE.Mesh(new THREE.CylinderGeometry(19, 19, 14, 16), m);
+  d1.position.y = 350;
+  g.add(d1);
+  const d2 = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 8, 16), m);
+  d2.position.y = 448;
+  g.add(d2);
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 4, 134, 8), m);
+  ant.position.y = 567;
+  g.add(ant);
+  scene.add(g);
+  return m;
+}
+
+// 富士山 (西南西の地平線)
+export function addFuji(scene) {
+  const [X, Z] = ll(35.3606, 138.7274);
+  const d = Math.hypot(X, Z);
+  // 本当は約 95km 先。描画の都合で 14km 先に縮めて置く (見える角度は同じ)
+  const k = 14000 / d;
+  const geo = new THREE.ConeGeometry(3776 * k * 3.1, 3776 * k, 48, 1, true);
+  const c = geo.attributes.position;
+  const cols = [];
+  for (let i = 0; i < c.count; i++) {
+    const y = c.getY(i) / (3776 * k) + 0.5;
+    if (y > 0.8) cols.push(0.95, 0.96, 1); else cols.push(0.42, 0.5, 0.66);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, transparent: true, opacity: 0.8 });
+  const mesh = new THREE.Mesh(geo, m);
+  mesh.position.set(X * k, 3776 * k / 2 - 40, Z * k);
+  scene.add(mesh);
+  return m;
+}
