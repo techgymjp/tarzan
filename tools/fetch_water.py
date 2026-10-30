@@ -14,8 +14,8 @@ from fetch_plateau_mvt import decode, area2  # MVT の読み取りは共通
 
 Z = 15
 URL = 'https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf'
-LAT_MIN, LAT_MAX = 35.640, 35.716
-LON_MIN, LON_MAX = 139.685, 139.790
+LAT_MIN, LAT_MAX = 35.640, 35.726
+LON_MIN, LON_MAX = 139.685, 139.808
 LAT0, LON0 = 35.6740, 139.7450
 KX = 111320 * math.cos(math.radians(LAT0))
 KZ = 110574

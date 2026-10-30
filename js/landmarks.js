@@ -671,3 +671,6 @@ export function addPalaceGates(scene, city) {
   scene.add(g);
   return { sakurada: [SX, SZ], hanzo: [HX, HZ] };
 }
+
+// ほかのファイル (landmarks2.js) からも使う部品
+export { hipGeo, hallBuilding, canvasTex, JP };

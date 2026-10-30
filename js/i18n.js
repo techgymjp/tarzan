@@ -82,7 +82,13 @@ const EN = {
   '東京ドーム': 'Tokyo Dome', '日本武道館': 'Nippon Budokan', '皇居': 'Imperial Palace', '皇居（宮殿）': 'Imperial Palace', '宮殿': 'Palace',
   '長和殿': 'Chowaden', '正殿': 'Seiden', '豊明殿': 'Homeiden', '表御座所': 'Omote Gozasho', '連翠': 'Rensui',
   '伏見櫓': 'Fushimi Turret', '富士見櫓': 'Fujimi Turret', '桜田巽櫓': 'Sakurada Tatsumi Turret', '二重橋': 'Nijubashi Bridge', '江戸城': 'Edo Castle', '天守台': 'Keep Base',
-  '東宮御所': 'Togu Palace', '桜田門': 'Sakuradamon Gate', '半蔵門': 'Hanzomon Gate', '警視庁本部': 'Tokyo Metropolitan Police HQ', '首相官邸': "Prime Minister's Office", '自由民主党本部': 'LDP Headquarters', '国立国会図書館': 'National Diet Library', '最高裁判所': 'Supreme Court', '東京スカイツリー': 'Tokyo Skytree',
+  '東宮御所': 'Togu Palace', '浅草寺': 'Senso-ji', '本堂': 'Main Hall', '五重塔': 'Five-storied Pagoda', '宝蔵門': 'Hozomon Gate', '雷門': 'Kaminarimon Gate',
+  'アサヒの金の炎': 'Asahi Golden Flame', 'アサヒ スーパードライホール': 'Asahi Super Dry Hall', 'アサヒビールタワー': 'Asahi Beer Tower', '西郷隆盛像': 'Saigo Takamori Statue',
+  '不忍池 弁天堂': 'Shinobazu Pond Bentendo', '上野動物園': 'Ueno Zoo', 'ニコライ堂': 'Nikolai-do Cathedral', '神田明神': 'Kanda Myojin', '随神門': 'Zuishinmon Gate', '聖橋': 'Hijiribashi Bridge',
+  '将門塚': 'Masakado-zuka', '東京駅 丸の内駅舎': 'Tokyo Station Marunouchi Building', '日枝神社': 'Hie Shrine', '豊川稲荷': 'Toyokawa Inari', '秋葉原駅': 'Akihabara Sta.', '御茶ノ水駅': 'Ochanomizu Sta.',
+  'マーチエキュート神田万世橋': 'mAAch ecute Manseibashi (brick viaduct)', '総武線': 'Sobu Line', '秋葉原 電気街': 'Akihabara Electric Town', 'ホテルニューオータニ ザ・メイン': 'Hotel New Otani The Main',
+  '平河町森タワー': 'Hirakawacho Mori Tower', '秋葉原UDX': 'Akihabara UDX', '墨田区役所': 'Sumida City Hall', '上野駅': 'Ueno Sta.', '東京国立博物館': 'Tokyo National Museum', '浅草駅': 'Asakusa Sta.', '御茶ノ水ソラシティ': 'Ochanomizu Sola City',
+  '御茶ノ水': 'Ochanomizu', '湯島・神田明神': 'Yushima / Kanda Myojin', '万世橋': 'Manseibashi', '秋葉原': 'Akihabara', '御徒町': 'Okachimachi', '上野': 'Ueno', '上野公園': 'Ueno Park', '浅草': 'Asakusa', '吾妻橋': 'Azumabashi', '桜田門': 'Sakuradamon Gate', '半蔵門': 'Hanzomon Gate', '警視庁本部': 'Tokyo Metropolitan Police HQ', '首相官邸': "Prime Minister's Office", '自由民主党本部': 'LDP Headquarters', '国立国会図書館': 'National Diet Library', '最高裁判所': 'Supreme Court', '東京スカイツリー': 'Tokyo Skytree',
   // 著名なビル
   '東京都庁': 'Tokyo Metropolitan Gov. Building', '新宿パークタワー': 'Shinjuku Park Tower', '新宿NSビル': 'Shinjuku NS Building',
   '渋谷スクランブルスクエア': 'Shibuya Scramble Square', '渋谷ヒカリエ': 'Shibuya Hikarie', 'セルリアンタワー': 'Cerulean Tower', '渋谷ストリーム': 'Shibuya Stream', '渋谷マークシティ': 'Shibuya Mark City', 'マークシティ': 'Shibuya Mark City',
@@ -135,7 +141,7 @@ const STATIC_EN = {
       <li>Keep holding W A S D (stick) to speed up</li>
       <li>Land on the roof of a named building to add it to your collection</li>`,
   back: 'Back', dexH: 'Building collection', pauseH: 'Paused', resume: 'Resume', retryBtn: '<b>Restart</b>', quitBtn: '<b>Title</b>',
-  resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 36,000 PLATEAU buildings',
+  resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 55,000 PLATEAU buildings',
   tJump: 'JUMP',
 };
 export function applyStatic() {

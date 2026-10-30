@@ -15,15 +15,25 @@ data/plateau-extra.json で補う (重なる建物は1つにする)。
 
 使い方:
   python3 tools/fetch_plateau_mvt.py 35.669 35.695 139.735 139.763 > data/plateau-extra.json
-  python3 tools/build_city.py <shutoko の js ディレクトリ> [data/plateau-extra.json] > js/city-data.js
+  python3 tools/fetch_plateau_mvt.py 35.693 35.722 139.762 139.804 > data/plateau-akiba-ueno-asakusa.json
+  python3 tools/fetch_plateau_mvt.py 35.668 35.686 139.722 139.7352 > data/plateau-akasaka.json
+  python3 tools/build_city.py <shutoko の js ディレクトリ> data/plateau-extra.json data/plateau-akasaka.json:10 data/plateau-akiba-ueno-asakusa.json:15 > js/city-data.js
 """
 import glob, json, math, sys
 
 src = sys.argv[1]
-EXTRA = sys.argv[2] if len(sys.argv) > 2 else None
-# 都心: 新宿・渋谷 〜 六本木・霞が関 〜 銀座・汐留・東京タワー、北は水道橋・後楽園 (東京ドーム) まで
-LAT_MIN, LAT_MAX = 35.645, 35.712
-LON_MIN, LON_MAX = 139.690, 139.785
+# 補う建物のファイル。「ファイル:高さ」と書くと、その高さ未満の小さな建物 (600m² 未満) は省く
+EXTRAS = []
+for a in sys.argv[2:]:
+    path, _, mh = a.partition(':')
+    EXTRAS.append((path, float(mh) if mh else 0))
+# 都心: 新宿・渋谷 〜 六本木・霞が関 〜 銀座・汐留・東京タワー、北は水道橋・後楽園 (東京ドーム)、上野・浅草まで
+LAT_MIN, LAT_MAX = 35.645, 35.722
+LON_MIN, LON_MAX = 139.690, 139.804
+# 街の範囲は2つの長方形を合わせた形: 都心 (北は水道橋まで) と、秋葉原〜上野〜浅草
+BOXES = [(35.645, 35.712, 139.690, 139.785), (35.693, 35.722, 139.762, 139.804)]
+def in_city(lat, lon, m=0.0):
+    return any(a - m < lat < b + m and c - m < lon < d + m for a, b, c, d in BOXES)
 LAT0, LON0 = 35.6740, 139.7450  # 原点 (霞が関・国会議事堂のあたり)
 KX = 111320 * math.cos(math.radians(LAT0))
 KZ = 110574
@@ -45,6 +55,19 @@ REPLACE = [
     (35.67880, 139.75560, 20),   # 桜田巽櫓
     (35.68060, 139.75420, 40),   # 二重橋
     (35.68800, 139.75570, 40),   # 江戸城 天守台
+    (35.71480, 139.79670, 70),   # 浅草寺 本堂・五重塔 (手作り)
+    (35.71110, 139.79630, 16),   # 雷門
+    (35.71330, 139.79650, 20),   # 宝蔵門
+    (35.71150, 139.77400, 10),   # 西郷隆盛像
+    (35.71230, 139.77030, 25),   # 不忍池 弁天堂
+    (35.70983, 139.80032, 26),   # アサヒ スーパードライホール (金の炎のオブジェ)
+    (35.69780, 139.76510, 32),   # ニコライ堂
+    (35.70200, 139.76790, 45),   # 神田明神
+    (35.68680, 139.76320, 10),   # 将門塚
+    # 東京駅 丸の内駅舎 (南北に長い。いくつかの点で除く)
+    (35.67960, 139.76630, 30), (35.68040, 139.76670, 30), (35.68120, 139.76710, 30), (35.68200, 139.76750, 30), (35.68280, 139.76790, 30),
+    (35.67480, 139.73970, 28),   # 日枝神社 社殿
+    (35.67670, 139.73130, 26),   # 豊川稲荷
 ]
 rep_xy = [((lo - LON0) * KX, -(la - LAT0) * KZ, r) for la, lo, r in REPLACE]
 
@@ -75,7 +98,7 @@ for f in sorted(glob.glob(src + '/course-*data.js')):
         cv = [conv(px / 2, pz / 2) for px, pz in pts]
         clat = sum(c[0] for c in cv) / n
         clon = sum(c[1] for c in cv) / n
-        if not (LAT_MIN < clat < LAT_MAX and LON_MIN < clon < LON_MAX):
+        if not in_city(clat, clon):
             continue
         if any((sum(c[2] for c in cv) / n - x) ** 2 + (sum(c[3] for c in cv) / n - z) ** 2 < r * r for x, z, r in rep_xy):
             continue
@@ -99,7 +122,7 @@ for f in sorted(glob.glob(src + '/course-*data.js')):
     seg = None
     for p in range(0, min(L, len(d['x'])), 2):
         lat, lon, X, Z = conv(d['x'][p], d['z'][p])
-        inside = LAT_MIN - 0.003 < lat < LAT_MAX + 0.003 and LON_MIN - 0.003 < lon < LON_MAX + 0.003
+        inside = in_city(lat, lon, 0.003)
         if not inside:
             if seg and len(seg['x']) > 2:
                 roads.append(seg)
@@ -148,7 +171,30 @@ for r in sorted(roads, key=lambda r: -len(r['x'])):
 
 # ---------- コースデータにない所を、PLATEAU のベクトルタイルで補う ----------
 added = 0
-if EXTRA:
+# 既に入っている建物の輪郭 (重心が中に入る、高さもほぼ同じ建物は同じ建物の破片として省く)
+POLY_CELL = 50
+polys = {}
+def add_poly(h2, q):
+    xs = [p[0] / 2 for p in q]; zs = [p[1] / 2 for p in q]
+    rec = (h2, [(p[0] / 2, p[1] / 2) for p in q], min(xs), max(xs), min(zs), max(zs))
+    for gx in range(int(min(xs) // POLY_CELL), int(max(xs) // POLY_CELL) + 1):
+        for gz in range(int(min(zs) // POLY_CELL), int(max(zs) // POLY_CELL) + 1):
+            polys.setdefault((gx, gz), []).append(rec)
+def pip(pts, x, z):
+    c = False
+    for i in range(len(pts)):
+        (xi, zi), (xj, zj) = pts[i], pts[i - 1]
+        if (zi > z) != (zj > z) and x < (xj - xi) * (z - zi) / (zj - zi) + xi:
+            c = not c
+    return c
+def covered(cx, cz, h2):
+    for h, pts, x0, x1, z0, z1 in polys.get((int(cx // POLY_CELL), int(cz // POLY_CELL)), ()):
+        if abs(h - h2) <= 4 and x0 <= cx <= x1 and z0 <= cz <= z1 and pip(pts, cx, cz):
+            return True
+    return False
+for h2, q in out:
+    add_poly(h2, q)
+for EXTRA, MIN_H in EXTRAS:
     # 高架の首都高にかかる建物は除く (コースデータと同じ考え方)
     deck = [(x, z) for r in kept for x, z, h, t in zip(r['x'], r['z'], r['h'], r['t']) if not t and h >= 3]
     dgrid = {}
@@ -163,7 +209,7 @@ if EXTRA:
             continue
         clat = sum(p[0] for p in bd['r']) / len(bd['r'])
         clon = sum(p[1] for p in bd['r']) / len(bd['r'])
-        if not (LAT_MIN < clat < LAT_MAX and LON_MIN < clon < LON_MAX):
+        if not in_city(clat, clon):
             continue
         cv = [((lo - LON0) * KX, -(la - LAT0) * KZ) for la, lo in bd['r']]
         if len(cv) > 3 and cv[0] == cv[-1]:
@@ -172,7 +218,7 @@ if EXTRA:
         cx = sum(c[0] for c in cv) / n
         cz = sum(c[1] for c in cv) / n
         a = abs(sum(cv[i][0] * cv[i - 1][1] - cv[i - 1][0] * cv[i][1] for i in range(n))) / 2
-        if a < 20:
+        if a < 20 or (h < MIN_H and a < 600):
             continue
         if any((cx - x) ** 2 + (cz - z) ** 2 < r * r for x, z, r in rep_xy):
             continue
@@ -184,8 +230,12 @@ if EXTRA:
                for ddx in (-1, 0, 1) for ddz in (-1, 0, 1)
                for sx, sz, hh in seen.get((gk[0] + ddx, gk[1] + ddz), ())):
             continue
+        if covered(cx, cz, h2):
+            continue
         seen.setdefault(gk, []).append((cx, cz, h2))
-        out.append((h2, [(round(x * 2), round(z * 2)) for x, z in cv]))
+        q = [(round(x * 2), round(z * 2)) for x, z in cv]
+        out.append((h2, q))
+        add_poly(h2, q)
         added += 1
 
 flat = []

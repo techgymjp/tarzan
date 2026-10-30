@@ -6,6 +6,7 @@ import { Sfx, Bgm } from './audio.js';
 import { MISSIONS, AREAS, FAMOUS, ONI_BASE_DENSITY, ONI_STEP } from './missions.js';
 import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
+import { addSensoji, addAsahi, addUeno, addOchanomizu, addTokyoStation, addAkasaka, addRailways, addAkibaSigns, addNewOtani } from './landmarks2.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
 import { WATER } from './water-data.js';
@@ -108,6 +109,15 @@ const budokan = addBudokan(scene, city);
 const palace = addImperialPalace(scene, city);
 const togu = addTogu(scene, city);
 const gates = addPalaceGates(scene, city);
+const sensoji = addSensoji(scene, city);
+const asahi = addAsahi(scene, city);
+const ueno = addUeno(scene, city);
+const ocha = addOchanomizu(scene, city);
+const tstation = addTokyoStation(scene, city);
+const akasaka = addAkasaka(scene, city);
+const rails = addRailways(scene, city);
+const akiba = addAkibaSigns(scene, city);
+const otani = addNewOtani(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
 const sfx = new Sfx();
@@ -156,7 +166,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]], ['浅草寺 本堂', sensoji.pos[0], 40, sensoji.pos[1]], ['浅草寺 五重塔', sensoji.pagoda[0], 62, sensoji.pagoda[1]], ['雷門', sensoji.kaminari[0], 20, sensoji.kaminari[1]], ['アサヒの金の炎', asahi.pos[0], 52, asahi.pos[1]], ['アサヒビールタワー', asahi.tower[0], asahi.tower[2] + 16, asahi.tower[1]], ['西郷隆盛像', ueno.saigo[0], 12, ueno.saigo[1]], ['不忍池 弁天堂', ueno.benten[0], 22, ueno.benten[1]], ['上野動物園', ...ll(35.71640, 139.77130).flatMap((v, i) => (i ? [v] : [v, 45]))], ['ニコライ堂', ocha.nikolai[0], 48, ocha.nikolai[1]], ['神田明神', ocha.kanda[0], 28, ocha.kanda[1]], ['聖橋', ocha.hijiri[0], 26, ocha.hijiri[1]], ['将門塚', ocha.masakado[0], 8, ocha.masakado[1]], ['東京駅 丸の内駅舎', tstation.pos[0], 48, tstation.pos[1]], ['日枝神社', akasaka.hie[0], 26, akasaka.hie[1]], ['豊川稲荷', akasaka.toyokawa[0], 22, akasaka.toyokawa[1]], ['秋葉原駅', ...ll(35.69840, 139.77310).flatMap((v, i) => (i ? [v] : [v, 50]))], ['御茶ノ水駅', ...ll(35.69950, 139.76470).flatMap((v, i) => (i ? [v] : [v, 30]))], ['マーチエキュート神田万世橋', rails.manseibashi[0], 18, rails.manseibashi[1]], ['秋葉原 電気街', akiba.pos[0], 72, akiba.pos[1]], ['ホテルニューオータニ ザ・メイン', otani.pos[0], 88, otani.pos[1]]]) {
   const sp = labelSprite(nm(name));
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -1283,6 +1293,7 @@ function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, clock.getDelta());
   fireworks.update(dt);
+  rails.update(dt);
   techgym.update(clock.elapsedTime);
   if (game.state === 'play') update(dt);
   else if (game.state === 'title') {
