@@ -8,9 +8,14 @@ import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
+import { LANG, setLang, t, tr, nm, applyStatic } from './i18n.js';
 import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan, addImperialPalace, addTogu } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
+applyStatic();
+// ステージ名・説明 (英語のときは英語)
+const mt = (m) => (LANG === 'en' && m.en ? m.en.title : m.title);
+const ms = (m) => (LANG === 'en' && m.en ? m.en.sub : m.sub);
 // 結果のシェアに付ける紹介記事の URL
 const SHARE_URL = 'https://techgym.jp/column/claude-code-game-tarzan/';
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -150,7 +155,7 @@ for (const [name, lat, lon] of FAMOUS) {
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
 for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]]]) {
-  const sp = labelSprite(name);
+  const sp = labelSprite(nm(name));
   sp.position.set(x, y, z);
   scene.add(sp);
   labels.push({ sp, x, z });
@@ -158,7 +163,7 @@ for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[
 for (const bd of city.bld) {
   if (!bd.famous) continue;
   if (labels.some((l) => l.text === bd.name)) continue;
-  const sp = labelSprite(bd.name);
+  const sp = labelSprite(nm(bd.name));
   sp.position.set(bd.cx, bd.h + 12, bd.cz);
   scene.add(sp);
   labels.push({ sp, x: bd.cx, z: bd.cz, text: bd.name });
@@ -290,7 +295,7 @@ const dexKey = (n) => n.split(' ')[0];
 const DEX_ALL = [...new Set(city.bld.filter((b) => b.name).map((b) => dexKey(b.name)))];
 let dex = new Set(store.get('dex', []));
 function updateDexCount() {
-  $('dexCount').textContent = `${dex.size} / ${DEX_ALL.length} 棟`;
+  $('dexCount').textContent = t('dexCount', { n: dex.size, total: DEX_ALL.length });
 }
 updateDexCount();
 
@@ -434,7 +439,7 @@ function startPoint(m) {
   }
   return [x, best.h + 0.05, z];
 }
-const FREE = { id: 'free', title: 'ビル図鑑あつめ', start: [212, 307], rings: [] };
+const FREE = { id: 'free', title: t('freeTitle'), start: [212, 307], rings: [] };
 
 // ---------- 状態 ----------
 const game = {
@@ -473,7 +478,7 @@ function startGame(m) {
   $('timer').classList.toggle('hidden', game.mode !== 'mission');
   $('nav').classList.toggle('hidden', game.mode !== 'mission');
   $('dex').classList.toggle('hidden', game.mode !== 'free');
-  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ スペースキー: ロープをつかむ／離す ・ A D: 曲がる ・ Shift: ジャンプ ・ R: やり直し ・ Esc: 一時停止';
+  $('hint').textContent = isTouch ? '' : t('hintPC');
   lastArea = '';
   lockPointer();
 }
@@ -522,10 +527,10 @@ function updateOni(dt) {
     if (maintainT <= 0) { oni.maintain(player, FREE_RHO, FREE_R, builtArea, game.oniFirst ? 400 : undefined); game.oniFirst = false; maintainT = 1; }
   }
   const r = oni.update(dt, player, game.countdown <= 0);
-  if (r.spawned) floater(`鬼が ${r.spawned.length} 匹 徘徊している！`, false);
+  if (r.spawned) floater(t('oniSpawned', { n: r.spawned.length }), false);
   if (r.found.length) {
     sfx.oniLaugh();
-    floater(r.found.length > 1 ? `鬼 ${r.found.length} 匹に見つかった！` : '鬼に見つかった！', true);
+    floater(r.found.length > 1 ? t('oniFoundN', { n: r.found.length }) : t('oniFound1'), true);
   }
   game.chasers = oni.list.filter((o) => o.state === 'chase').length;
   // 追いかけられている間は BGM を止めて警報を鳴らす
@@ -547,7 +552,7 @@ function updateOni(dt) {
   }
   $('danger').style.opacity = Number.isFinite(r.nearestChase) ? Math.max(0, Math.min(1, (180 - r.nearestChase) / 140)) : 0;
   $('danger').classList.toggle('alarm', chased);
-  $('oni').textContent = `👹 ${oni.list.length}${chased ? `（追跡 ${game.chasers}）` : ''}`;
+  $('oni').textContent = `👹 ${oni.list.length}${chased ? t('oniChase', { n: game.chasers }) : ''}`;
   $('oni').classList.toggle('danger', chased);
   if (r.caught) gameOver();
 }
@@ -561,15 +566,16 @@ function gameOver() {
   flash(0.6);
   unlockPointer();
   const m = game.mission;
-  $('resTitle').textContent = '鬼に捕まった！';
+  $('resTitle').textContent = t('caught');
+  const score = Math.round(game.score).toLocaleString();
   game.shareText = game.mode === 'mission'
-    ? `ターザン大東京「${m.title}」でチェックポイント ${game.ringIdx}/${rings.length} まで行ったけど、鬼に捕まった…👹 得点 ${Math.round(game.score).toLocaleString()}pt #ターザン大東京`
-    : `ターザン大東京で東京のビルを ${dex.size}/${DEX_ALL.length} 棟 図鑑に集めたけど、鬼に捕まった…👹 #ターザン大東京`;
+    ? t('shareCaughtMission', { m: mt(m), i: game.ringIdx, n: rings.length, s: score })
+    : t('shareCaughtFree', { n: dex.size, total: DEX_ALL.length });
   $('resNext').classList.add('hidden');
   $('resStars').textContent = '👹';
-  $('resBody').innerHTML = `${m.title}<br>${game.mode === 'mission' ? `チェックポイント ${game.ringIdx} / ${rings.length} ・ ${fmt(game.t)}` : `図鑑 ${dex.size} / ${DEX_ALL.length} 棟`}<br>
-    得点 <b>${Math.round(game.score).toLocaleString()}</b> pt<br>
-    最大コンボ ${game.maxCombo} ／ 着地成功 ${game.landings} 回 ／ 最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h`;
+  $('resBody').innerHTML = `${mt(m)}<br>${game.mode === 'mission' ? t('resCaughtMission', { i: game.ringIdx, n: rings.length, t: fmt(game.t) }) : t('resCaughtFree', { n: dex.size, total: DEX_ALL.length })}<br>
+    ${t('resScore', { s: score })}<br>
+    ${t('resCaughtStats', { c: game.maxCombo, l: game.landings, v: Math.round(game.maxSpeed * 3.6) })}`;
   setTimeout(() => {
     if (game.state !== 'result') return;
     showScreen('result');
@@ -606,21 +612,20 @@ function finishMission() {
   const nextWasOpen = idx + 1 < MISSIONS.length && isUnlocked(idx + 1);
   markCleared(m.id);
   store.set('best', bests);
-  $('resTitle').textContent = '配達完了！';
+  $('resTitle').textContent = tr('clear');
   $('resStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
-  $('resBody').innerHTML = `${m.title}<br><b>${fmt(t)}</b>${isBest ? ' <span style="color:#ffb020">ベスト更新！</span>' : `（ベスト ${fmt(prev.t)}）`}<br>
-    得点 ${Math.round(game.score).toLocaleString()} pt ／ 最大コンボ ${game.maxCombo}<br>
-    最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h ／ ナイスリリース ${game.nice} 回 ／ 着地成功 ${game.landings} 回<br>
+  $('resBody').innerHTML = `${mt(m)}<br><b>${fmt(t)}</b>${isBest ? ` <span style="color:#ffb020">${tr('newBest')}</span>` : tr('prevBest', { t: fmt(prev.t) })}<br>
+    ${tr('resClearStats', { s: Math.round(game.score).toLocaleString(), c: game.maxCombo, v: Math.round(game.maxSpeed * 3.6), n: game.nice, l: game.landings })}<br>
     <small>★★★ ${fmt(L / 34)} ／ ★★ ${fmt(L / 24)}</small>`;
-  game.shareText = `ターザン大東京「${m.title}」を ${fmt(t)} で配達完了！ ${'★'.repeat(stars)}${'☆'.repeat(3 - stars)} 得点 ${Math.round(game.score).toLocaleString()}pt #ターザン大東京`;
+  game.shareText = tr('shareClear', { m: mt(m), t: fmt(t), stars: '★'.repeat(stars) + '☆'.repeat(3 - stars), s: Math.round(game.score).toLocaleString() });
   // 鍵が開いたお知らせと「次のステージへ」
   const next = MISSIONS[idx + 1];
   let unlockMsg = '';
-  if (next && !nextWasOpen) unlockMsg += `<div class="unlock">🔓 「${next.title}」の鍵が開いた！</div>`;
-  if (!wasFree && freeUnlocked()) unlockMsg += `<div class="unlock">🔓 全ステージクリア！「ビル図鑑あつめ」の鍵が開いた！</div>`;
+  if (next && !nextWasOpen) unlockMsg += `<div class="unlock">${tr('unlockNext', { m: mt(next) })}</div>`;
+  if (!wasFree && freeUnlocked()) unlockMsg += `<div class="unlock">${tr('unlockFree')}</div>`;
   $('resBody').innerHTML += unlockMsg;
   $('resNext').classList.toggle('hidden', !next);
-  if (next) { $('resNext').innerHTML = `<b>次のステージへ ▶ ${next.title}</b>`; $('resNext').onclick = () => startGame(next); }
+  if (next) { $('resNext').innerHTML = `<b>${tr('nextStage', { m: mt(next) })}</b>`; $('resNext').onclick = () => startGame(next); }
   showScreen('result');
   $('hud').classList.add('hidden');
   $('touch').classList.add('hidden');
@@ -736,7 +741,7 @@ function tryFire() {
   if (game.state !== 'play' || game.countdown > 0) return;
   if (player.rope) { player.release(); return; }
   if (heli.reachDist(player.hand()) <= REACH) player.grab(heli.hook);
-  else { sfx.miss(); floater('ロープに届かない', false); }
+  else { sfx.miss(); floater(t('ropeFar'), false); }
 }
 
 // ---------- HUD ----------
@@ -1015,23 +1020,23 @@ function handleEvents(dt) {
     } else if (e.type === 'release' && e.nice) {
       game.nice++;
       game.score += 200 * mult();
-      floater('ナイスリリース！', true);
+      floater(t('nice'), true);
     } else if (e.type === 'land') {
       if (e.what === 'ground') { endCombo(); game.standBd = null; }
       // ロープでほかのビルの屋上に着地できたらボーナス (花火はチェックポイントだけ)
       if (e.what === 'roof' && e.bd && e.bd !== game.standBd && game.ropedSince) {
         game.landings++;
         game.score += 500 * mult();
-        floater(e.bd.name ? `${e.bd.name} に着地！` : '着地成功！', true);
+        floater(e.bd.name ? t('landedOn', { b: nm(e.bd.name) }) : t('landed'), true);
       }
       if (e.what === 'roof') { game.standBd = e.bd; game.ropedSince = false; }
       if (e.what === 'roof' && e.bd) collectDex(e.bd);
       if (e.what === 'roof' || e.what === 'road') game.lastSafe = [player.p.x, player.p.y, player.p.z];
-      if (e.vy > 45) { cam.shake = 0.6; floater('ドスン！', false); }
+      if (e.vy > 45) { cam.shake = 0.6; floater(t('thud'), false); }
     } else if (e.type === 'bump') {
       cam.shake = Math.min(1, e.speed / 40);
       flash(0.25);
-      if (e.speed > 30) floater('ゴツン！', false);
+      if (e.speed > 30) floater(t('bonk'), false);
     }
   }
   player.events.length = 0;
@@ -1050,13 +1055,13 @@ function handleEvents(dt) {
       game.nearCd = 1.2;
       game.score += 300 * mult();
       sfx.near();
-      floater('ニアミス！', true);
+      floater(t('nearMiss'), true);
     }
   }
 }
 // 名前のあるビルの屋上に降りると図鑑に載る
 function collectDex(bd) {
-  if (!bd.name) { if (bd.plateau) toast(`ビル 高さ ${Math.round(bd.h)}m`); return; }
+  if (!bd.name) { if (bd.plateau) toast(t('building', { h: Math.round(bd.h) })); return; }
   const key = dexKey(bd.name);
   if (!dex.has(key)) {
     dex.add(key);
@@ -1064,15 +1069,15 @@ function collectDex(bd) {
     game.newDex++;
     game.score += 1000;
     sfx.collect();
-    toast(`📖 図鑑に登録！ ${bd.name}（${Math.round(bd.h)}m） ${dex.size}/${DEX_ALL.length}`, true);
+    toast(t('dexNew', { b: nm(bd.name), h: Math.round(bd.h), n: dex.size, total: DEX_ALL.length }), true);
     updateDexCount();
-  } else toast(`🏢 ${bd.name}（${Math.round(bd.h)}m）`);
+  } else toast(t('dexKnown', { b: nm(bd.name), h: Math.round(bd.h) }));
 }
 function launchFireworks(n, big, gap) {
   for (const t of fireworks.show(camera, n, big, gap)) sfx.firework(t);
 }
 function endCombo() {
-  if (game.combo >= 3) floater(`${game.combo} コンボ！`, false);
+  if (game.combo >= 3) floater(t('combo', { n: game.combo }), false);
   game.combo = 0;
 }
 function flash(a) {
@@ -1091,7 +1096,7 @@ function respawn() {
   player.reset(...p, cam.yaw);
   heli.reset(player.p, cam.yaw);
   endCombo();
-  floater('やり直し', false);
+  floater(t('retry'), false);
 }
 
 function pause() {
@@ -1109,7 +1114,7 @@ $('resRetry').onclick = () => startGame(game.mission);
 $('resShare').onclick = async () => {
   if (!game.shareText) return;
   if (navigator.share && isTouch) {
-    try { await navigator.share({ title: 'ターザン大東京', text: game.shareText, url: SHARE_URL }); } catch (e) { /* キャンセル */ }
+    try { await navigator.share({ title: t('shareTitle'), text: game.shareText, url: SHARE_URL }); } catch (e) { /* キャンセル */ }
     return;
   }
   window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(game.shareText) + '&url=' + encodeURIComponent(SHARE_URL), '_blank', 'noopener');
@@ -1118,11 +1123,11 @@ $('resCopy').onclick = async () => {
   if (!game.shareText) return;
   try {
     await navigator.clipboard.writeText(game.shareText + ' ' + SHARE_URL);
-    $('resCopy').textContent = 'コピーしました';
+    $('resCopy').textContent = t('copied');
   } catch (e) {
-    $('resCopy').textContent = 'コピーできませんでした';
+    $('resCopy').textContent = t('copyFail');
   }
-  setTimeout(() => { $('resCopy').textContent = '結果をコピー'; }, 1800);
+  setTimeout(() => { $('resCopy').textContent = t('copy'); }, 1800);
 };
 $('resQuit').onclick = () => toTitle();
 function toTitle() {
@@ -1164,35 +1169,40 @@ function buildMenu() {
     b.className = 'mode' + (open ? '' : ' locked');
     const best = bests[m.id];
     b.innerHTML = open
-      ? `${best ? `<span class="best">${'★'.repeat(best.stars)} ${fmt(best.t)}</span>` : ''}<b>${i + 1}. ${m.title}</b><span>${m.sub}</span>`
-      : `<b>🔒 ${i + 1}. ${m.title}</b><span>「${MISSIONS[i - 1].title}」をクリアすると開きます</span>`;
+      ? `${best ? `<span class="best">${'★'.repeat(best.stars)} ${fmt(best.t)}</span>` : ''}<b>${i + 1}. ${mt(m)}</b><span>${ms(m)}</span>`
+      : `<b>🔒 ${i + 1}. ${mt(m)}</b><span>${t('lockedNeed', { m: mt(MISSIONS[i - 1]) })}</span>`;
     b.onclick = () => { if (open) startGame(m); else { sfx.resume(); sfx.miss(); } };
     list.appendChild(b);
   });
   const fo = freeUnlocked();
   $('freeBtn').classList.toggle('locked', !fo);
   $('freeBtn').innerHTML = fo
-    ? `<b>ビル図鑑あつめ</b><span>霞が関ビルの屋上から自由に飛び回る。名前のあるビルの屋上に降りると図鑑に載る（<em id="dexCount">0</em>）</span>`
-    : `<b>🔒 ビル図鑑あつめ</b><span>配達ミッションを全部クリアすると開きます（図鑑 <em id="dexCount">0</em>）</span>`;
+    ? `<b>${t('freeTitle')}</b><span>${t('freeOpen')}</span>`
+    : `<b>🔒 ${t('freeTitle')}</b><span>${t('freeLocked')}</span>`;
   updateDexCount();
 }
 buildMenu();
 $('freeBtn').onclick = () => { if (freeUnlocked()) startGame(FREE); else { sfx.resume(); sfx.miss(); } };
 $('howBtn').onclick = () => showScreen('how');
 $('dexBtn').onclick = () => {
-  $('dexTotal').textContent = `${dex.size} / ${DEX_ALL.length} 棟`;
+  $('dexTotal').textContent = t('dexCount', { n: dex.size, total: DEX_ALL.length });
   const l = $('dexList');
   l.innerHTML = '';
   for (const n of [...DEX_ALL].sort((a, b) => dex.has(b) - dex.has(a))) {
     const d = document.createElement('div');
     d.className = dex.has(n) ? '' : 'no';
-    d.textContent = dex.has(n) ? n : '？？？';
+    d.textContent = dex.has(n) ? nm(n) : t('unknown');
     l.appendChild(d);
   }
   showScreen('dexScreen');
 };
 document.querySelectorAll('[data-close]').forEach((b) => { b.onclick = () => showScreen('title'); });
 document.querySelectorAll('#tod button').forEach((b) => { b.onclick = () => applyTod(b.dataset.v); });
+// 言語 (切り替えるとページを読み直す)
+document.querySelectorAll('#langSel button').forEach((b) => {
+  b.classList.toggle('on', b.dataset.v === LANG);
+  b.onclick = () => { if (b.dataset.v !== LANG) setLang(b.dataset.v); };
+});
 
 function setBgm(on) {
   bgmOn = on;
@@ -1296,8 +1306,8 @@ function update(dt) {
         launchFireworks(5, true, 0.3); // 花火はチェックポイントを通過したときだけ
         flash(0.15);
         if (game.ringIdx >= rings.length) { finishMission(); return; }
-        floater(`${cur.label} 通過！`, false);
-        if (oni.addOne(player)) floater(`鬼が増えた！（${oni.list.length} 匹）`, false);
+        floater(t('cpPassed', { b: nm(cur.label) }), false);
+        if (oni.addOne(player)) floater(t('oniMore', { n: oni.list.length }), false);
       }
     }
   }
@@ -1336,9 +1346,9 @@ function update(dt) {
   // つかめる位置にいたら知らせる
   const canGrab = !player.rope && heli.reachDist(player.hand()) <= REACH;
   $('groundTip').classList.toggle('hidden', !canGrab);
-  $('groundTip').textContent = isTouch ? 'つかめる！「つかむ」ボタンをタップ' : 'つかめる！ スペースキー';
+  $('groundTip').textContent = isTouch ? t('grabTouch') : t('grabPC');
   $('tRope').classList.toggle('ready', canGrab);
-  $('tRope').textContent = player.rope ? 'はなす' : 'つかむ';
+  $('tRope').textContent = player.rope ? t('release') : t('grab');
 
   // 影
   const f = city.floorAt(player.p.x, player.p.z, player.p.y + 0.1);
@@ -1369,8 +1379,8 @@ function update(dt) {
       const ang = Math.atan2(-dx, -dz) - cam.yaw;
       $('navArrow').style.transform = `rotate(${-ang}rad)`;
       const dy = cur.pos.y - player.p.y;
-      const goal = game.ringIdx === rings.length - 1 ? '🏁 ゴール ' : '';
-      $('navText').textContent = `${goal}${cur.label} ${Math.round(Math.hypot(dx, dz))}m ${dy > 8 ? '▲' : dy < -8 ? '▼' : ''}`;
+      const goal = game.ringIdx === rings.length - 1 ? t('goal') : '';
+      $('navText').textContent = `${goal}${nm(cur.label)} ${Math.round(Math.hypot(dx, dz))}m ${dy > 8 ? '▲' : dy < -8 ? '▼' : ''}`;
     }
   } else {
     $('dex').textContent = `📖 ${dex.size} / ${DEX_ALL.length}`;
@@ -1387,7 +1397,7 @@ function update(dt) {
     }
     if (best && best !== lastArea) {
       lastArea = best;
-      $('area').textContent = best;
+      $('area').textContent = nm(best);
       $('area').classList.add('show');
       areaTimer = 2.5;
     }

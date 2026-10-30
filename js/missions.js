@@ -8,6 +8,7 @@ export const MISSIONS = [
   {
     id: 'kasumigaseki',
     title: '霞が関デビュー',
+    en: { title: 'Kasumigaseki Debut', sub: 'Tutorial ・ Kasumigaseki Bldg → Toranomon → Akasaka → National Diet' },
     sub: 'チュートリアル ・ 霞が関ビル → 虎ノ門 → 赤坂 → 国会議事堂',
     oni: 10, // 鬼の数。ほかのステージはこの密度 (1kmあたり約5.4匹) を基準に、ステージが上がるごとに 15% ずつ過密にする
     start: [212, 307],
@@ -22,6 +23,7 @@ export const MISSIONS = [
   {
     id: 'roppongi-tower',
     title: '六本木 → 東京タワー',
+    en: { title: 'Roppongi → Tokyo Tower', sub: 'From the Mori Tower roof via the Tokyo Tower decks to Hamamatsucho' },
     sub: '森タワーの屋上から、東京タワーの展望台を経て浜松町へ',
     start: [-1423, 1504],
     rings: [
@@ -37,6 +39,7 @@ export const MISSIONS = [
   {
     id: 'shiodome-tokyo',
     title: '汐留 → 銀座 → 東京駅',
+    en: { title: 'Shiodome → Ginza → Tokyo Sta.', sub: 'From the Shiodome towers down the Ginza avenues to Marunouchi and Otemachi' },
     sub: '超高層の汐留から銀座の大通りを抜けて丸の内・大手町へ',
     start: [1447, 954],
     rings: [
@@ -53,6 +56,7 @@ export const MISSIONS = [
   {
     id: 'shinjuku-shibuya',
     title: '新宿 → 渋谷',
+    en: { title: 'Shinjuku → Shibuya', sub: 'From Shinjuku Park Tower south along Yamate-dori, via Ohashi to Shibuya Scramble Square' },
     sub: '新宿パークタワーから山手通りを南へ、大橋から渋谷スクランブルスクエアへ',
     start: [-4889, -1270],
     rings: [
@@ -68,6 +72,7 @@ export const MISSIONS = [
   {
     id: 'tokyo-dome',
     title: '大手町 → 東京ドーム → 武道館',
+    en: { title: 'Otemachi → Tokyo Dome → Budokan', sub: 'From Otemachi Tower via Jimbocho and Suidobashi onto the Tokyo Dome roof, around Iidabashi, finishing on the Nippon Budokan roof' },
     sub: '大手町タワーの屋上から神保町・水道橋を抜けて東京ドームの屋根へ。飯田橋を回って、最終ゴールは日本武道館の大屋根',
     start: [1841, -1257],
     rings: [
@@ -84,6 +89,7 @@ export const MISSIONS = [
   {
     id: 'c1-loop',
     title: 'C1 ぐるり大冒険',
+    en: { title: 'C1 Grand Loop', sub: 'Kasumigaseki → Shiodome → Ginza → Nihonbashi → Otemachi → Jimbocho → Budokan → Kioicho → Kasumigaseki (about 10km)' },
     sub: '霞が関 → 汐留 → 銀座 → 日本橋 → 大手町 → 神保町 → 日本武道館 → 紀尾井町 → 霞が関（約10km）',
     start: [212, 307],
     rings: [

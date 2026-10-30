@@ -42,7 +42,7 @@
   <div id="stick"><div id="knob"></div></div>
   <div id="tbtns">
     <button id="tRope">つかむ</button>
-    <button id="tJump">ジャンプ</button>
+    <button id="tJump" data-i18n="tJump">ジャンプ</button>
   </div>
   <button id="tPause">❚❚</button>
   <button id="tRetry">↺</button>
@@ -52,41 +52,45 @@
 <div id="title" class="screen">
   <div class="panel">
     <h1>ターザン大東京<small>TARZAN DAI-TOKYO</small></h1>
-    <p class="lead">実在の東京都心のビルからビルへ、ロープ1本で飛び移れ。</p>
+    <p class="lead" data-i18n="lead">実在の東京都心のビルからビルへ、ロープ1本で飛び移れ。</p>
     <div class="row">
-      <span class="label">時間帯</span>
+      <span class="label" data-i18n="todLabel">時間帯</span>
       <div class="seg" id="tod">
-        <button data-v="day">昼</button><button data-v="dusk" class="on">夕暮れ</button><button data-v="night">夜</button>
+        <button data-v="day" data-i18n="day">昼</button><button data-v="dusk" class="on" data-i18n="dusk">夕暮れ</button><button data-v="night" data-i18n="night">夜</button>
       </div>
       <span class="label">BGM</span>
       <div class="seg" id="bgmSel"><button data-v="on" class="on">ON</button><button data-v="off">OFF</button></div>
     </div>
-    <h2>配達ミッション</h2>
+    <div class="row">
+      <span class="label" data-i18n="langLabel">言語 / Language</span>
+      <div class="seg" id="langSel"><button data-v="ja">日本語</button><button data-v="en">English</button></div>
+    </div>
+    <h2 data-i18n="missionsH">配達ミッション</h2>
     <div id="missionList"></div>
-    <h2>フリーターザン</h2>
+    <h2 data-i18n="freeH">フリーターザン</h2>
     <button class="mode" id="freeBtn"><b>ビル図鑑あつめ</b><span>霞が関ビルの屋上から自由に飛び回る。名前のあるビルの屋上に降りると図鑑に載る（<em id="dexCount">0</em>）</span></button>
     <div class="row small">
-      <button class="link" id="howBtn">あそびかた</button>
-      <button class="link" id="dexBtn">ビル図鑑を見る</button>
+      <button class="link" id="howBtn" data-i18n="howBtn">あそびかた</button>
+      <button class="link" id="dexBtn" data-i18n="dexBtn">ビル図鑑を見る</button>
     </div>
-    <p class="credit">ビルの形と高さ: 国土交通省 Project PLATEAU（東京都23区 2020年度）／ 首都高の線: © OpenStreetMap contributors ／ ミニマップ: 国土地理院 地理院タイル（淡色地図）。
+    <p class="credit" data-i18n="credit">ビルの形と高さ: 国土交通省 Project PLATEAU（東京都23区 2020年度）／ 首都高の線: © OpenStreetMap contributors ／ ミニマップ: 国土地理院 地理院タイル（淡色地図）。
       データは <a href="https://github.com/techgymjp/shutoko" target="_blank" rel="noopener">首都高グランプリ</a> のコースデータから作成</p>
   </div>
 </div>
 
 <div id="how" class="screen hidden">
   <div class="panel">
-    <h2>あそびかた</h2>
-    <table class="keys">
+    <h2 data-i18n="howH">あそびかた</h2>
+    <table class="keys" data-i18n="keys">
       <tr><th>視点</th><td>マウス（画面をクリックで固定）</td><td>右半分をドラッグ</td></tr>
       <tr><th>ロープ</th><td>スペースキーでつかむ／もう一度で離す（左クリックでも可）</td><td>つかむ ボタン（もう一度で離す）</td></tr>
       <tr><th>ジャンプ</th><td>Shift</td><td>ジャンプ</td></tr>
       <tr><th>移動・こぐ</th><td>W A S D</td><td>左のスティック</td></tr>
-      <tr><th>やり直し</th><td>R</td><td>—</td></tr>
+      <tr><th>やり直し</th><td>R</td><td>↺</td></tr>
       <tr><th>一時停止／消音／BGM</th><td>Esc ／ M ／ B</td><td>❚❚</td></tr>
       <tr><th>地図を大きく</th><td>N（またはミニマップをクリック）</td><td>ミニマップをタップ</td></tr>
     </table>
-    <ul class="tips">
+    <ul class="tips" data-i18n="tips">
       <li>ロープはすぐ前を飛ぶ <b>ヘリコプター</b> から垂れている。「つかめる！」と出たらスペースキー（スマホは「つかむ」ボタン）でつかまって前へ運ばれ、もう一度タップで離して飛んでいく。左右で曲がれる</li>
       <li>振り子の<b>いちばん下を過ぎて上がり始めたところ</b>で手を離すと「ナイスリリース！」で加速</li>
       <li>地面に足を着けずにロープにつかまるほど <b>コンボ</b> が増えて得点が上がる。屋上や首都高の高架の上なら1秒までは着地してもコンボが続く</li>
@@ -98,24 +102,24 @@
       <li>W A S D（スティック）を押し続けるほど加速する</li>
       <li>名前のあるビル（著名なビルや PLATEAU に名前が入っている建物）の屋上に降りると、ビル図鑑に載る</li>
     </ul>
-    <button class="primary" data-close>もどる</button>
+    <button class="primary" data-close data-i18n="back">もどる</button>
   </div>
 </div>
 
 <div id="dexScreen" class="screen hidden">
   <div class="panel">
-    <h2>ビル図鑑 <small id="dexTotal"></small></h2>
+    <h2><span data-i18n="dexH">ビル図鑑</span> <small id="dexTotal"></small></h2>
     <div id="dexList"></div>
-    <button class="primary" data-close>もどる</button>
+    <button class="primary" data-close data-i18n="back">もどる</button>
   </div>
 </div>
 
 <div id="pause" class="screen hidden">
   <div class="panel narrow">
-    <h2>一時停止</h2>
-    <button class="primary" id="resumeBtn">つづける</button>
-    <button class="mode" id="retryBtn"><b>はじめから</b></button>
-    <button class="mode" id="quitBtn"><b>タイトルへ</b></button>
+    <h2 data-i18n="pauseH">一時停止</h2>
+    <button class="primary" id="resumeBtn" data-i18n="resume">つづける</button>
+    <button class="mode" id="retryBtn" data-i18n="retryBtn"><b>はじめから</b></button>
+    <button class="mode" id="quitBtn" data-i18n="quitBtn"><b>タイトルへ</b></button>
   </div>
 </div>
 
@@ -126,15 +130,15 @@
     <div id="resBody"></div>
     <button class="primary" id="resNext"><b>次のステージへ</b></button>
     <div class="share">
-      <button id="resShare">シェアする</button>
-      <button id="resCopy">結果をコピー</button>
+      <button id="resShare" data-i18n="resShare">シェアする</button>
+      <button id="resCopy" data-i18n="resCopy">結果をコピー</button>
     </div>
-    <button class="mode" id="resRetry"><b>もう一度</b></button>
-    <button class="mode" id="resQuit"><b>タイトルへ</b></button>
+    <button class="mode" id="resRetry" data-i18n="resRetry"><b>もう一度</b></button>
+    <button class="mode" id="resQuit" data-i18n="resQuit"><b>タイトルへ</b></button>
   </div>
 </div>
 
-<div id="loading" class="screen"><div class="panel narrow"><h2>東京を組み立て中…</h2><p>PLATEAU のビル 約3.3万棟</p></div></div>
+<div id="loading" class="screen"><div class="panel narrow"><h2 data-i18n="loadingH">東京を組み立て中…</h2><p data-i18n="loadingP">PLATEAU のビル 約3.3万棟</p></div></div>
 
 <script type="module" src="js/main.js"></script>
 </body>
