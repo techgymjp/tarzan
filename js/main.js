@@ -8,7 +8,7 @@ import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
-import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan } from './landmarks.js';
+import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan, addImperialPalace, addTogu } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
 // 結果のシェアに付ける紹介記事の URL
@@ -99,6 +99,8 @@ addDiet(scene, city);
 const techgym = addTechGym(scene, city);
 const dome = addTokyoDome(scene, city);
 const budokan = addBudokan(scene, city);
+const palace = addImperialPalace(scene, city);
+const togu = addTogu(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
 const sfx = new Sfx();
@@ -147,7 +149,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]]]) {
   const sp = labelSprite(name);
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -231,7 +233,7 @@ scene.add(outer);
     const z = city.minZ - 400 + rnd() * (city.maxZ - city.minZ + 800);
     const px = Math.floor((x - GB.x0) * gsx), pz = Math.floor((z - GB.z0) * gsz);
     const i = (pz * GW + px) * 4;
-    if (img[i + 1] > img[i] + 12) pts.push([x, z, rnd()]);
+    if (img[i + 1] > img[i] + 12 && city.floorAt(x, z, 1e9).y === 0) pts.push([x, z, rnd()]); // 建物 (宮殿など) の上には植えない
   }
   const crown = new THREE.IcosahedronGeometry(1, 0);
   crown.translate(0, 1.6, 0);

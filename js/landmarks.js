@@ -464,3 +464,136 @@ export function addBudokan(scene, city) {
   }
   return { pos: [X, Z] };
 }
+
+// 寄棟風の屋根の形: 底が 1×1 の正方形の4角錐 (先に向きを整えてから、建物の大きさに引き伸ばす)
+const hipGeo = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1).rotateY(Math.PI / 4);
+// 屋根つきの建物 (壁の箱 + 寄棟風の屋根)。当たり判定も付ける
+function hallBuilding(g, city, X, Z, rot, lx, lz, w, d, wallH, roofH, wallMat, roofMat, name) {
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const wx = X + lx * cs + lz * sn, wz = Z - lx * sn + lz * cs;
+  const b = new THREE.Group();
+  b.position.set(wx - X, 0, wz - Z);
+  b.rotation.y = rot;
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), wallMat);
+  wall.position.y = wallH / 2;
+  b.add(wall);
+  // 寄棟風: 4角錐を建物の形に引き伸ばす (軒は少し出す)
+  const roof = new THREE.Mesh(hipGeo, roofMat);
+  roof.scale.set(w + 4, roofH, d + 4);
+  roof.position.y = wallH + roofH / 2;
+  b.add(roof);
+  g.add(b);
+  const corner = (ax, az) => [wx + ax * cs + az * sn, wz - ax * sn + az * cs];
+  const rect = [...corner(-w / 2, -d / 2), ...corner(w / 2, -d / 2), ...corner(w / 2, d / 2), ...corner(-w / 2, d / 2)];
+  city.addPrism(rect, 0, wallH + roofH * 0.45, name).roof = true;
+}
+// 白壁の櫓 (石垣 + 2〜3重の白い箱 + 黒い屋根)
+function yagura(scene, city, lat, lon, name, tiers = 2) {
+  const [X, Z] = ll(lat, lon);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  const stone = new THREE.MeshLambertMaterial({ color: 0x8d8a82 });
+  const white = new THREE.MeshLambertMaterial({ color: 0xf4f2ec });
+  const roofM = new THREE.MeshLambertMaterial({ color: 0x3e4448 });
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(9 * Math.SQRT2, 12 * Math.SQRT2, 10, 4), stone);
+  base.rotation.y = Math.PI / 4;
+  base.position.y = 5;
+  g.add(base);
+  let y = 10, w = 14;
+  for (let i = 0; i < tiers; i++) {
+    const h = 5.5;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, w * 0.8), white);
+    box.position.y = y + h / 2;
+    g.add(box);
+    const roof = new THREE.Mesh(hipGeo, roofM);
+    roof.scale.set(w + 4, 3.2, w * 0.8 + 4);
+    roof.position.y = y + h + 1.6;
+    g.add(roof);
+    y += h + 2.2;
+    w *= 0.72;
+  }
+  scene.add(g);
+  city.addBox(X, Z, 20, 20, 0, 10, name).roof = true;
+  city.addBox(X, Z, 14, 11, 10, y, name);
+  return [X, Z, y];
+}
+
+// 皇居: 宮殿 (緑の銅板屋根の低い殿舎)・伏見櫓・富士見櫓・桜田巽櫓・二重橋とお濠・江戸城天守台
+export function addImperialPalace(scene, city) {
+  const [X, Z] = ll(35.68380, 139.75280);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  const wallM = new THREE.MeshLambertMaterial({ color: 0xe9e3d3 });
+  const roofM = new THREE.MeshLambertMaterial({ color: 0x5f8f78 });
+  const rot = 0.15;
+  // 長和殿 (東の長い殿舎)・正殿・豊明殿・表御座所・連翠
+  hallBuilding(g, city, X, Z, rot, 70, 0, 22, 160, 10, 7, wallM, roofM, '皇居 宮殿 長和殿');
+  hallBuilding(g, city, X, Z, rot, 5, -10, 55, 34, 12, 9, wallM, roofM, '皇居 宮殿 正殿');
+  hallBuilding(g, city, X, Z, rot, 15, 58, 70, 32, 10, 8, wallM, roofM, '皇居 宮殿 豊明殿');
+  hallBuilding(g, city, X, Z, rot, -35, -70, 60, 30, 9, 7, wallM, roofM, '皇居 宮殿 表御座所');
+  hallBuilding(g, city, X, Z, rot, -40, 30, 40, 26, 8, 6, wallM, roofM, '皇居 宮殿 連翠');
+  // 東庭 (砂利の広場)
+  const court = new THREE.Mesh(new THREE.PlaneGeometry(60, 120), new THREE.MeshLambertMaterial({ color: 0xd6d0c2 }));
+  court.rotation.x = -Math.PI / 2;
+  court.position.set(110, 0.12, 0);
+  g.add(court);
+  scene.add(g);
+  // 櫓
+  yagura(scene, city, 35.68155, 139.75335, '伏見櫓', 2);
+  yagura(scene, city, 35.68290, 139.75580, '富士見櫓', 3);
+  yagura(scene, city, 35.67880, 139.75560, '桜田巽櫓', 2);
+  // 二重橋とお濠
+  const water = new THREE.MeshLambertMaterial({ color: 0x3f6f7a });
+  const [BX, BZ] = ll(35.68060, 139.75420);
+  const moat = new THREE.Mesh(new THREE.PlaneGeometry(320, 46), water);
+  moat.rotation.set(-Math.PI / 2, 0, 0.35);
+  moat.position.set(BX, 0.15, BZ);
+  scene.add(moat);
+  const stone = new THREE.MeshLambertMaterial({ color: 0xbdb7aa });
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(14, 3, 56), stone);
+  bridge.rotation.y = 0.35;
+  bridge.position.set(BX, 4, BZ);
+  scene.add(bridge);
+  for (const t of [-1, 1]) {
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(7, 1.6, 6, 16, Math.PI), stone);
+    arch.rotation.y = 0.35 + Math.PI / 2;
+    arch.position.set(BX + Math.sin(0.35) * t * 12, 0, BZ + Math.cos(0.35) * t * 12);
+    scene.add(arch);
+  }
+  city.addBox(BX, BZ, 14, 14, 0, 5.5, '二重橋').roof = true;
+  // 江戸城 天守台 (東御苑)
+  const [TX, TZ] = ll(35.68800, 139.75570);
+  const tensh = new THREE.Mesh(new THREE.CylinderGeometry(22 * Math.SQRT2, 25 * Math.SQRT2, 11, 4), new THREE.MeshLambertMaterial({ color: 0x9a968c }));
+  tensh.rotation.y = Math.PI / 4;
+  tensh.position.set(TX, 5.5, TZ);
+  scene.add(tensh);
+  city.addBox(TX, TZ, 46, 46, 0, 11, '江戸城 天守台').roof = true;
+  return { pos: [X, Z], tenshu: [TX, TZ] };
+}
+
+// 東宮御所 (港区元赤坂 赤坂御用地): 白い壁と緑青の銅板屋根の2階建て
+export function addTogu(scene, city) {
+  const [X, Z] = ll(35.67870, 139.72630);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  const winTex = canvasTex(256, 64, (c, w, h) => {
+    c.fillStyle = '#f3f0e8';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#56636c';
+    for (let x = 0; x < w; x += 32) { c.fillRect(x + 8, 10, 16, 18); c.fillRect(x + 8, 38, 16, 18); }
+  });
+  winTex.wrapS = THREE.RepeatWrapping;
+  winTex.repeat.set(6, 1);
+  const wallM = new THREE.MeshLambertMaterial({ map: winTex });
+  const roofM = new THREE.MeshLambertMaterial({ color: 0x6f9c88 });
+  const rot = -0.2;
+  hallBuilding(g, city, X, Z, rot, 0, 0, 90, 34, 11, 6, wallM, roofM, '東宮御所');
+  hallBuilding(g, city, X, Z, rot, -38, 34, 30, 40, 9, 5, wallM, roofM, '東宮御所');
+  hallBuilding(g, city, X, Z, rot, 38, 34, 30, 40, 9, 5, wallM, roofM, '東宮御所');
+  const lawn = new THREE.Mesh(new THREE.CircleGeometry(90, 32), new THREE.MeshLambertMaterial({ color: 0x6e9a55 }));
+  lawn.rotation.x = -Math.PI / 2;
+  lawn.position.set(0, 0.12, -70);
+  g.add(lawn);
+  scene.add(g);
+  return { pos: [X, Z] };
+}
