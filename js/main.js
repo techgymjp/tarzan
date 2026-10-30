@@ -6,12 +6,12 @@ import { Sfx, Bgm } from './audio.js';
 import { MISSIONS, AREAS, FAMOUS, ONI_BASE_DENSITY, ONI_STEP } from './missions.js';
 import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
-import { addSensoji, addAsahi, addUeno, addOchanomizu, addTokyoStation, addAkasaka, addRailways, addAkibaSigns, addNewOtani, addShibuyaRoppongi } from './landmarks2.js';
+import { addSensoji, addAsahi, addUeno, addOchanomizu, addTokyoStation, addAkasaka, addRailways, addAkibaSigns, addNewOtani, addShibuyaRoppongi, addShinjuku, addYotsuyaKudan } from './landmarks2.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
 import { WATER } from './water-data.js';
 import { LANG, setLang, t, tr, nm, applyStatic } from './i18n.js';
-import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan, addImperialPalace, addTogu, addPalaceGates } from './landmarks.js';
+import { addTokyoTower, addDiet, addSkytree, addFuji, addDistant, BAY, addTechGym, addTokyoDome, addBudokan, addImperialPalace, addTogu, addPalaceGates } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
 applyStatic();
@@ -28,7 +28,7 @@ const store = {
 };
 
 // ---------- 描画の準備 ----------
-const renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance', stencil: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1.5 : 2));
 renderer.setSize(innerWidth, innerHeight);
 $('app').appendChild(renderer.domElement);
@@ -61,6 +61,7 @@ const skyMat = new THREE.ShaderMaterial({
       gl_FragColor = vec4(c, 1.0); }`,
 });
 const sky = new THREE.Mesh(new THREE.SphereGeometry(15000, 32, 16), skyMat);
+sky.renderOrder = -3;
 scene.add(sky);
 
 // 窓のテクスチャ (8×8 の窓が1枚)。lit = 夜に明かりがつく窓
@@ -119,8 +120,11 @@ const rails = addRailways(scene, city);
 const akiba = addAkibaSigns(scene, city);
 const otani = addNewOtani(scene, city);
 const sr = addShibuyaRoppongi(scene, city);
+const sj = addShinjuku(scene, city);
+const yk = addYotsuyaKudan(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
+const distant = addDistant(scene);
 const sfx = new Sfx();
 const bgm = new Bgm(sfx);
 let bgmOn = store.get('bgm', true);
@@ -167,7 +171,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]], ['浅草寺 本堂', sensoji.pos[0], 40, sensoji.pos[1]], ['浅草寺 五重塔', sensoji.pagoda[0], 62, sensoji.pagoda[1]], ['雷門', sensoji.kaminari[0], 20, sensoji.kaminari[1]], ['アサヒの金の炎', asahi.pos[0], 52, asahi.pos[1]], ['アサヒビールタワー', asahi.tower[0], asahi.tower[2] + 16, asahi.tower[1]], ['西郷隆盛像', ueno.saigo[0], 12, ueno.saigo[1]], ['不忍池 弁天堂', ueno.benten[0], 22, ueno.benten[1]], ['上野動物園', ...ll(35.71640, 139.77130).flatMap((v, i) => (i ? [v] : [v, 45]))], ['ニコライ堂', ocha.nikolai[0], 48, ocha.nikolai[1]], ['神田明神', ocha.kanda[0], 28, ocha.kanda[1]], ['聖橋', ocha.hijiri[0], 26, ocha.hijiri[1]], ['将門塚', ocha.masakado[0], 8, ocha.masakado[1]], ['東京駅 丸の内駅舎', tstation.pos[0], 48, tstation.pos[1]], ['日枝神社', akasaka.hie[0], 26, akasaka.hie[1]], ['豊川稲荷', akasaka.toyokawa[0], 22, akasaka.toyokawa[1]], ['秋葉原駅', ...ll(35.69840, 139.77310).flatMap((v, i) => (i ? [v] : [v, 50]))], ['御茶ノ水駅', ...ll(35.69950, 139.76470).flatMap((v, i) => (i ? [v] : [v, 30]))], ['マーチエキュート神田万世橋', rails.manseibashi[0], 18, rails.manseibashi[1]], ['秋葉原 電気街', akiba.pos[0], 72, akiba.pos[1]], ['ホテルニューオータニ ザ・メイン', otani.pos[0], 88, otani.pos[1]], ['SHIBUYA109', sr.s109[0], 66, sr.s109[1]], ['スクランブル交差点', sr.scramble[0], 14, sr.scramble[1]], ['ハチ公像', sr.hachiko[0], 6, sr.hachiko[1]], ['国立代々木競技場', sr.yoyogi[0], 52, sr.yoyogi[1]], ['国立新美術館', sr.nact[0], 34, sr.nact[1]], ['麻布台ヒルズ 森JPタワー', sr.azabudai[0], 345, sr.azabudai[1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]], ['浅草寺 本堂', sensoji.pos[0], 40, sensoji.pos[1]], ['浅草寺 五重塔', sensoji.pagoda[0], 62, sensoji.pagoda[1]], ['雷門', sensoji.kaminari[0], 20, sensoji.kaminari[1]], ['アサヒの金の炎', asahi.pos[0], 52, asahi.pos[1]], ['アサヒビールタワー', asahi.tower[0], asahi.tower[2] + 16, asahi.tower[1]], ['西郷隆盛像', ueno.saigo[0], 12, ueno.saigo[1]], ['不忍池 弁天堂', ueno.benten[0], 22, ueno.benten[1]], ['上野動物園', ...ll(35.71640, 139.77130).flatMap((v, i) => (i ? [v] : [v, 45]))], ['ニコライ堂', ocha.nikolai[0], 48, ocha.nikolai[1]], ['神田明神', ocha.kanda[0], 28, ocha.kanda[1]], ['聖橋', ocha.hijiri[0], 26, ocha.hijiri[1]], ['将門塚', ocha.masakado[0], 8, ocha.masakado[1]], ['東京駅 丸の内駅舎', tstation.pos[0], 48, tstation.pos[1]], ['日枝神社', akasaka.hie[0], 26, akasaka.hie[1]], ['豊川稲荷', akasaka.toyokawa[0], 22, akasaka.toyokawa[1]], ['秋葉原駅', ...ll(35.69840, 139.77310).flatMap((v, i) => (i ? [v] : [v, 50]))], ['御茶ノ水駅', ...ll(35.69950, 139.76470).flatMap((v, i) => (i ? [v] : [v, 30]))], ['マーチエキュート神田万世橋', rails.manseibashi[0], 18, rails.manseibashi[1]], ['秋葉原 電気街', akiba.pos[0], 72, akiba.pos[1]], ['ホテルニューオータニ ザ・メイン', otani.pos[0], 88, otani.pos[1]], ['SHIBUYA109', sr.s109[0], 66, sr.s109[1]], ['スクランブル交差点', sr.scramble[0], 14, sr.scramble[1]], ['ハチ公像', sr.hachiko[0], 6, sr.hachiko[1]], ['国立代々木競技場', sr.yoyogi[0], 52, sr.yoyogi[1]], ['国立新美術館', sr.nact[0], 34, sr.nact[1]], ['麻布台ヒルズ 森JPタワー', sr.azabudai[0], 345, sr.azabudai[1]], ['東急歌舞伎町タワー', sj.kabukichoTower[0], 240, sj.kabukichoTower[1]], ['新宿東宝ビル', sj.toho[0], 150, sj.toho[1]], ['歌舞伎町一番街', sj.ichibangai[0], 16, sj.ichibangai[1]], ['ゴールデン街', sj.goldenGai[0], 14, sj.goldenGai[1]], ['花園神社', sj.hanazono[0], 22, sj.hanazono[1]], ['思い出横丁', sj.omoide[0], 14, sj.omoide[1]], ['NTTドコモ代々木ビル', sj.docomo[0], 252, sj.docomo[1]], ['須賀神社', yk.suga[0], 20, yk.suga[1]], ['防衛省', yk.mod[0], yk.mod[2] + 100, yk.mod[1]], ['靖国神社', yk.yasukuni[0], 30, yk.yasukuni[1]], ['靖国神社 大鳥居', yk.yasukuniTorii[0], 36, yk.yasukuniTorii[1]], ['水道橋駅', rails.stations['水道橋駅'][0], 22, rails.stations['水道橋駅'][1]], ['飯田橋駅', rails.stations['飯田橋駅'][0], 22, rails.stations['飯田橋駅'][1]], ['市ケ谷駅', rails.stations['市ケ谷駅'][0], 22, rails.stations['市ケ谷駅'][1]], ['四ツ谷駅', rails.stations['四ツ谷駅'][0], 22, rails.stations['四ツ谷駅'][1]], ['信濃町駅', rails.stations['信濃町駅'][0], 22, rails.stations['信濃町駅'][1]], ['千駄ケ谷駅', rails.stations['千駄ケ谷駅'][0], 22, rails.stations['千駄ケ谷駅'][1]], ['代々木駅', rails.stations['代々木駅'][0], 22, rails.stations['代々木駅'][1]], ['新宿駅', rails.stations['新宿駅'][0], 22, rails.stations['新宿駅'][1]], ['浅草橋駅', rails.stations['浅草橋駅'][0], 22, rails.stations['浅草橋駅'][1]]]) {
   const sp = labelSprite(nm(name));
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -250,11 +254,32 @@ const gsx = GW / (GB.x1 - GB.x0), gsz = GH / (GB.z1 - GB.z0);
     g.stroke();
   }
 }
-// 水面のメッシュ (地面のテクスチャより細かく、光る)
+// 東京湾の所は地面に穴をあける (下に描く海が見えるように)
 {
-  const pos = [];
+  const g = groundCanvas.getContext('2d');
+  g.globalCompositeOperation = 'destination-out';
+  g.beginPath();
+  BAY.forEach(([la, lo], i) => { const [x, z] = ll(la, lo); const cx = (x - GB.x0) * gsx, cy = (z - GB.z0) * gsz; if (i) g.lineTo(cx, cy); else g.moveTo(cx, cy); });
+  g.fill();
+  g.globalCompositeOperation = 'source-over';
+}
+const groundTex = new THREE.CanvasTexture(groundCanvas);
+groundTex.colorSpace = THREE.SRGBColorSpace;
+groundTex.anisotropy = 8;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(GB.x1 - GB.x0, GB.z1 - GB.z0), new THREE.MeshLambertMaterial({ map: groundTex, alphaTest: 0.5 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.set((GB.x0 + GB.x1) / 2, 0, (GB.z0 + GB.z1) / 2);
+scene.add(ground);
+// 水面: お濠や川は道より低い。水の形の穴を地面にあけ (ステンシル)、沈めた水面と石垣の壁を描く
+// 深さ: ふつう 2.5m、皇居のお濠のあたりは約5m、お茶の水の神田川の谷は約10m
+const waterDepth = (x, z) => {
+  const [ox, oz] = ll(35.70000, 139.76300), [px, pz] = ll(35.68520, 139.75280);
+  return 2.5 + 7.5 * Math.exp(-(((x - ox) ** 2 + (z - oz) ** 2) / 600 ** 2)) + 2.5 * Math.exp(-(((x - px) ** 2 + (z - pz) ** 2) / 1300 ** 2));
+};
+{
+  const pos = [], wall = [], mask = [];
+  const toV = (ring) => { const v = []; for (let i = 0; i < ring.length; i += 2) v.push(new THREE.Vector2(ring[i] / 2, ring[i + 1] / 2)); return v; };
   for (const poly of WATER) {
-    const toV = (ring) => { const v = []; for (let i = 0; i < ring.length; i += 2) v.push(new THREE.Vector2(ring[i] / 2, ring[i + 1] / 2)); return v; };
     const outer = toV(poly[0]);
     const holes = poly.slice(1).map(toV);
     let tris;
@@ -265,25 +290,87 @@ const gsx = GW / (GB.x1 - GB.x0), gsz = GH / (GB.z1 - GB.z0);
       // 上向きの面になるように並べる
       const ny = (B.y - A.y) * (C.x - A.x) - (B.x - A.x) * (C.y - A.y);
       const tri = ny >= 0 ? [A, B, C] : [A, C, B];
-      for (const p of tri) pos.push(p.x, 0.07, p.y);
+      for (const p of tri) { pos.push(p.x, -waterDepth(p.x, p.y) + 0.4, p.y); mask.push(p.x, 0.02, p.y); }
+    }
+    // 岸の壁 (水面から道の高さまで)
+    for (const ring of [outer, ...holes]) {
+      for (let k = 0; k < ring.length; k++) {
+        const A = ring[k], B = ring[(k + 1) % ring.length];
+        const da = -waterDepth(A.x, A.y), db = -waterDepth(B.x, B.y);
+        wall.push(A.x, da, A.y, B.x, db, B.y, B.x, 0.02, B.y, A.x, da, A.y, B.x, 0.02, B.y, A.x, 0.02, A.y);
+      }
     }
   }
-  const wg = new THREE.BufferGeometry();
-  wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  wg.computeVertexNormals();
-  const water = new THREE.Mesh(wg, new THREE.MeshPhongMaterial({ color: 0x3e6f84, specular: 0x8899aa, shininess: 60 }));
+  const geo = (arr) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.computeVertexNormals(); return g; };
+  // 1) 水の形をステンシルに書く (色も深さも書かない)。地面より先に描く
+  const maskMesh = new THREE.Mesh(geo(mask), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }));
+  maskMesh.renderOrder = -1;
+  scene.add(maskMesh);
+  // 2) 沈めた水面と石垣
+  const water = new THREE.Mesh(geo(pos), new THREE.MeshPhongMaterial({ color: 0x3e6f84, specular: 0x8899aa, shininess: 60 }));
   scene.add(water);
+  const sc = document.createElement('canvas');
+  sc.width = 128; sc.height = 64;
+  ((c, w, h) => {
+    c.fillStyle = '#8f8b80';
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(50,45,40,0.45)';
+    c.lineWidth = 2;
+    for (let y = 0; y < h; y += 16) {
+      c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
+      for (let x = (y / 16) % 2 ? 0 : 16; x < w; x += 32) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 16); c.stroke(); }
+    }
+  })(sc.getContext('2d'), 128, 64);
+  const stoneTex = new THREE.CanvasTexture(sc);
+  stoneTex.colorSpace = THREE.SRGBColorSpace;
+  const wg = geo(wall);
+  // 壁の UV: 横は長さ、縦は高さ (石の大きさをそろえる)
+  const uv = [];
+  for (let i = 0; i < wall.length; i += 18) {
+    const L = Math.hypot(wall[i + 3] - wall[i], wall[i + 5] - wall[i + 2]) / 4;
+    const ha = wall[i + 1] / 2, hb = wall[i + 4] / 2;
+    uv.push(0, ha, L, hb, L, 0, 0, ha, L, 0, 0, 0);
+  }
+  wg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping;
+  scene.add(new THREE.Mesh(wg, new THREE.MeshLambertMaterial({ map: stoneTex, side: THREE.DoubleSide })));
+  // 3) 地面はステンシルが 1 (水) の所には描かない
+  Object.assign(ground.material, { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp });
+  // 当たり判定: 水の上は床が水面の高さ (お濠や川に落ちられる)
+  const WC = 64, wgrid = new Map();
+  const rings = WATER.map((poly) => poly.map((r) => { const a = new Float32Array(r.length); for (let i = 0; i < r.length; i++) a[i] = r[i] / 2; return a; }));
+  rings.forEach((poly, pi) => {
+    const r = poly[0];
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); z0 = Math.min(z0, r[i + 1]); z1 = Math.max(z1, r[i + 1]); }
+    for (let gx = Math.floor(x0 / WC); gx <= Math.floor(x1 / WC); gx++) for (let gz = Math.floor(z0 / WC); gz <= Math.floor(z1 / WC); gz++) {
+      const k = gx + ',' + gz;
+      if (!wgrid.has(k)) wgrid.set(k, []);
+      wgrid.get(k).push(pi);
+    }
+  });
+  const inRing = (r, x, z) => {
+    let c = false;
+    for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
+      if ((r[i + 1] > z) !== (r[j + 1] > z) && x < (r[j] - r[i]) * (z - r[i + 1]) / (r[j + 1] - r[i + 1]) + r[i]) c = !c;
+    }
+    return c;
+  };
+  city.waterAt = (x, z) => {
+    const l = wgrid.get(Math.floor(x / WC) + ',' + Math.floor(z / WC));
+    if (l) for (const pi of l) {
+      const poly = rings[pi];
+      if (inRing(poly[0], x, z) && !poly.slice(1).some((h) => inRing(h, x, z))) return waterDepth(x, z) - 0.4;
+    }
+    return 0;
+  };
 }
-const groundTex = new THREE.CanvasTexture(groundCanvas);
-groundTex.colorSpace = THREE.SRGBColorSpace;
-groundTex.anisotropy = 8;
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(GB.x1 - GB.x0, GB.z1 - GB.z0), new THREE.MeshLambertMaterial({ map: groundTex }));
-ground.rotation.x = -Math.PI / 2;
-ground.position.set((GB.x0 + GB.x1) / 2, 0, (GB.z0 + GB.z1) / 2);
-scene.add(ground);
 const outer = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshLambertMaterial({ color: 0x5f7a4c }));
 outer.rotation.x = -Math.PI / 2;
 outer.position.y = -0.3;
+// 街の外の地面と海は、空のすぐ後に深さを書かずに描く (遠くでちらつかないように)
+outer.material.depthWrite = false;
+outer.renderOrder = -2;
 scene.add(outer);
 
 // 木 (緑の所に。10月なので銀杏の黄色と紅葉を混ぜる)
@@ -329,7 +416,9 @@ scene.add(outer);
 }
 
 // 影 (足元の丸)
-const blob = new THREE.Mesh(new THREE.CircleGeometry(0.7, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
+// 影: 床と重なってちらつかないよう、深さを手前にずらして描く (高く落ちているときはカメラから遠いので特に)
+const blob = new THREE.Mesh(new THREE.CircleGeometry(0.7, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+blob.renderOrder = 1;
 blob.rotation.x = -Math.PI / 2;
 scene.add(blob);
 
@@ -345,6 +434,7 @@ function applyTod(k) {
   skyMat.uniforms.night.value = k === 'night' ? 1 : 0;
   scene.fog.color.setHex(t.fog);
   scene.fog.far = t.fogFar;
+  distant.setTod(k, t.fog);
   sun.color.setHex(t.sun);
   sun.intensity = t.sunI;
   sun.position.set(...t.sunDir).multiplyScalar(1000);
@@ -903,9 +993,20 @@ function detailTile(x, y) {
     t = new Image();
     t.crossOrigin = 'anonymous';
     t.src = `https://cyberjapandata.gsi.go.jp/xyz/pale/${DETAIL_Z}/${x}/${y}.png`;
-    tileCache.set(key, t);
+    // 画像の展開は描く前に裏ですませる (初めて描くときのカクつきを防ぐ)
+    t.decode().then(() => { t.ready = true; }, () => {});
+    // 遠くのタイルは捨てて、メモリを使いすぎないようにする (いちばん古いものから)
+    if (tileCache.size > 96) {
+      const old = tileCache.keys().next().value;
+      tileCache.get(old).src = '';
+      tileCache.delete(old);
+    }
+  } else {
+    // 使ったタイルは新しい側へ
+    tileCache.delete(key);
   }
-  return t.complete && t.naturalWidth ? t : null;
+  tileCache.set(key, t);
+  return t.ready ? t : null;
 }
 function toDetail(x, z) {
   const [lat, lon] = worldToGeo(x, z);
@@ -934,9 +1035,14 @@ function drawMinimap() {
   mm.scale(zoom, zoom);
   // 下地: ズーム15の地図を2倍に (座標はプレイヤーからの相対)
   const sc = 2 ** (DETAIL_Z - MAP_Z);
-  mm.drawImage(mapCanvas, mapOrigin.x * sc - mex, mapOrigin.y * sc - mey, mapCanvas.width * sc, mapCanvas.height * sc);
-  // 細かい地図のタイル
+  // 大きな地図の全体ではなく、見える所だけを切り出して描く (毎フレームの負担を軽く)
   const R = W / 2 / zoom * 1.42 + 256;
+  {
+    const sx0 = Math.max(0, Math.floor((mex - R) / sc - mapOrigin.x)), sy0 = Math.max(0, Math.floor((mey - R) / sc - mapOrigin.y));
+    const sx1 = Math.min(mapCanvas.width, Math.ceil((mex + R) / sc - mapOrigin.x)), sy1 = Math.min(mapCanvas.height, Math.ceil((mey + R) / sc - mapOrigin.y));
+    if (sx1 > sx0 && sy1 > sy0) mm.drawImage(mapCanvas, sx0, sy0, sx1 - sx0, sy1 - sy0, (mapOrigin.x + sx0) * sc - mex, (mapOrigin.y + sy0) * sc - mey, (sx1 - sx0) * sc, (sy1 - sy0) * sc);
+  }
+  // 細かい地図のタイル
   for (let ty = Math.floor((mey - R) / 256); ty <= Math.floor((mey + R) / 256); ty++) {
     for (let tx = Math.floor((mex - R) / 256); tx <= Math.floor((mex + R) / 256); tx++) {
       const img = detailTile(tx, ty);
@@ -1317,6 +1423,7 @@ function frame() {
   }
   updateLabels();
   sky.position.copy(camera.position);
+  distant.follow(camera);
   renderer.render(scene, camera);
 }
 
@@ -1436,8 +1543,8 @@ function update(dt) {
 
   // 影
   const f = city.floorAt(player.p.x, player.p.z, player.p.y + 0.1);
-  blob.position.set(player.p.x, f.y + 0.06, player.p.z);
   const hgt = player.p.y - f.y;
+  blob.position.set(player.p.x, f.y + 0.06 + Math.min(hgt, 200) * 0.002, player.p.z);
   blob.scale.setScalar(Math.max(0.4, 1 - hgt / 60));
   blob.material.opacity = Math.max(0.08, 0.4 - hgt / 150);
 

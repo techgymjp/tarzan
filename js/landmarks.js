@@ -472,7 +472,7 @@ function hallBuilding(g, city, X, Z, rot, lx, lz, w, d, wallH, roofH, wallMat, r
   const cs = Math.cos(rot), sn = Math.sin(rot);
   const wx = X + lx * cs + lz * sn, wz = Z - lx * sn + lz * cs;
   const b = new THREE.Group();
-  b.position.set(wx - X, 0, wz - Z);
+  b.position.set(wx - g.position.x, 0, wz - g.position.z); // g の位置からの相対 (g が原点のままでもよい)
   b.rotation.y = rot;
   const wall = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), wallMat);
   wall.position.y = wallH / 2;
@@ -674,3 +674,77 @@ export function addPalaceGates(scene, city) {
 
 // ほかのファイル (landmarks2.js) からも使う部品
 export { hipGeo, hallBuilding, canvasTex, JP };
+
+// ---------- 遠景: 丹沢・箱根・奥多摩・秩父・筑波山・房総の山なみと東京湾 ----------
+// 山は実際の方角と見かけの高さ (地球の丸みを引いて、少しだけ強調) で、カメラを囲む輪の上に描く
+const PEAKS = [
+  // [緯度, 経度, 標高m, 幅(度)]
+  [35.4767, 139.1389, 1673, 3], [35.4742, 139.1636, 1567, 2], [35.4500, 139.1633, 1491, 2], [35.4408, 139.2314, 1252, 2.2], // 丹沢 (蛭ヶ岳・丹沢山・塔ノ岳・大山)
+  [35.2333, 139.0236, 1438, 3], [35.2500, 139.0700, 1200, 3], // 箱根
+  [35.6253, 139.2436, 599, 2], [35.6520, 139.1670, 855, 2], // 高尾・陣馬
+  [35.7681, 139.1294, 1266, 2], [35.7631, 139.0661, 1405, 2.4], [35.8556, 138.9439, 2017, 3], [35.7500, 138.8400, 2057, 3], // 奥多摩・雲取山・大菩薩
+  [35.9378, 139.0961, 1304, 2], [36.0233, 138.8417, 1723, 3], [35.9094, 138.7278, 2475, 3], // 秩父 (武甲山・両神山・甲武信ヶ岳)
+  [36.5600, 139.1930, 1828, 4], [36.7650, 139.4900, 2486, 3], // 赤城山・男体山
+  [36.2253, 140.1067, 877, 2.5], // 筑波山
+  [35.1600, 139.8350, 330, 4], [35.2500, 139.9500, 379, 5], // 房総 (鋸山・鹿野山)
+];
+// 東京湾 (おおまかな海岸線)
+export const BAY = [[35.628, 139.745], [35.626, 139.800], [35.630, 139.840], [35.640, 139.870], [35.660, 139.900], [35.680, 139.960], [35.670, 140.020], [35.630, 140.060], [35.590, 140.100], [35.520, 140.060], [35.450, 139.990], [35.380, 139.920], [35.300, 139.820], [35.200, 139.800], [35.000, 139.780], [35.000, 139.650], [35.250, 139.690], [35.300, 139.660], [35.400, 139.660], [35.450, 139.650], [35.500, 139.700], [35.530, 139.740], [35.555, 139.765], [35.585, 139.765], [35.610, 139.755], [35.620, 139.745]];
+export function addDistant(scene) {
+  const R = 12500, EARTH = 6371000 / 0.87; // 大気の屈折を少し入れた地球の半径
+  const STEP = 0.5, N = 720;
+  const el = new Float32Array(N);
+  for (const [la, lo, h, w] of PEAKS) {
+    const [x, z] = ll(la, lo);
+    const d = Math.hypot(x, z);
+    const az = (Math.atan2(x, -z) * 180 / Math.PI + 360) % 360; // 北から時計回り
+    const e = Math.max(0, (h - d * d / (2 * EARTH)) / d) * 2.6; // 見かけの高さ (ラジアン、2.6倍に強調)
+    for (let i = 0; i < N; i++) {
+      let da = Math.abs(i * STEP - az);
+      if (da > 180) da = 360 - da;
+      const v = e * Math.exp(-((da / w) ** 2));
+      if (v > el[i]) el[i] = v;
+    }
+  }
+  // 西の山なみはひと続きに (南西の箱根〜北西の秩父)、少しでこぼこを足す
+  for (let i = 0; i < N; i++) {
+    const a = i * STEP;
+    if (a > 215 && a < 330) el[i] = Math.max(el[i], 0.006 + 0.003 * Math.sin(a * 0.9) + 0.002 * Math.sin(a * 2.7));
+  }
+  const pos = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const a = (i % N) * STEP * Math.PI / 180;
+    const sx = Math.sin(a) * R, sz = -Math.cos(a) * R;
+    pos.push(sx, -60, sz, sx, Math.tan(el[i % N]) * R - 20, sz);
+    if (i < N) idx.push(i * 2, i * 2 + 2, i * 2 + 1, i * 2 + 1, i * 2 + 2, i * 2 + 3);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  const mtMat = new THREE.MeshBasicMaterial({ color: 0x6f84a0, fog: false, side: THREE.DoubleSide });
+  const mountains = new THREE.Mesh(geo, mtMat);
+  scene.add(mountains);
+  // 海: いちばん下の層として、深さを書かずに先に描く (街の地面には海の所に穴をあけてある)
+  const shape = new THREE.Shape(BAY.map(([la, lo]) => { const [x, z] = ll(la, lo); return new THREE.Vector2(x, -z); }));
+  const seaGeo = new THREE.ShapeGeometry(shape);
+  seaGeo.rotateX(-Math.PI / 2);
+  const seaMat = new THREE.MeshBasicMaterial({ color: 0x3f6f9a, fog: false, side: THREE.DoubleSide });
+  const sea = new THREE.Mesh(seaGeo, seaMat);
+  sea.position.y = -0.2;
+  sea.renderOrder = -1;
+  seaMat.depthWrite = false;
+  scene.add(sea);
+  const MT = { day: 0x6a7f9e, dusk: 0x5a4a6e, night: 0x0d1428 };
+  const SEA = { day: 0x2f6a9e, dusk: 0x5a4a78, night: 0x08101f };
+  const c = new THREE.Color(), f = new THREE.Color();
+  return {
+    // 時間帯: もやの色に少し寄せる
+    setTod(k, fogHex) {
+      f.setHex(fogHex);
+      mtMat.color.copy(c.setHex(MT[k])).lerp(f, 0.2);
+      seaMat.color.copy(c.setHex(SEA[k])).lerp(f, 0.25);
+    },
+    // 山はいつもカメラから同じ距離に (空と同じ)
+    follow(cam) { mountains.position.set(cam.position.x, 0, cam.position.z); },
+  };
+}

@@ -154,6 +154,8 @@ export class City {
       const hd = s.h1 + (s.h2 - s.h1) * t;
       if (hd <= yRef + 0.7 && hd > f) { f = hd; what = 'road'; bdHit = null; }
     }
+    // お濠や川の上は、床が水面 (道より低い)
+    if (what === 'ground' && this.waterAt) { const d = this.waterAt(x, z); if (d) f = -d; }
     return { y: f, what, bd: bdHit };
   }
 

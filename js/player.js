@@ -173,7 +173,13 @@ export class Player {
       }
     }
     // 床 (屋上・首都高・地面)
-    const f = this.city.floorAt(p.x, p.z, Math.max(p.y, this.prev.y));
+    let f = this.city.floorAt(p.x, p.z, Math.max(p.y, this.prev.y));
+    // お濠や川に落ちたら、岸の石垣は登れない (ヘリのロープで引き上げてもらう)
+    if (this.grounded && this.floorY < -0.5 && f.what === 'ground' && f.y - this.floorY > 1.2 && p.y < f.y) {
+      p.x = this.prev.x; p.z = this.prev.z;
+      v.x = 0; v.z = 0;
+      f = this.city.floorAt(p.x, p.z, Math.max(p.y, this.prev.y));
+    }
     this.floorY = f.y;
     if (p.y <= f.y) {
       if (!this.grounded) {
