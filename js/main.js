@@ -627,6 +627,14 @@ function updateOni(dt) {
   $('danger').classList.toggle('alarm', chased);
   $('oni').textContent = `👹 ${oni.list.length}${chased ? t('oniChase', { n: game.chasers }) : ''}`;
   $('oni').classList.toggle('danger', chased);
+  // 一番近い鬼までの距離 (左下)。追われていたら赤、近ければオレンジ
+  const od = $('oniDist');
+  od.classList.toggle('hidden', !Number.isFinite(r.nearest));
+  if (Number.isFinite(r.nearest)) {
+    od.textContent = t('oniDist', { d: Math.round(r.nearest) });
+    od.classList.toggle('chase', chased);
+    od.classList.toggle('near', !chased && r.nearest < 400);
+  }
   if (r.caught) gameOver();
 }
 // 鬼に捕まったらアウト
@@ -669,6 +677,7 @@ function finishMission() {
   sfx.heli(null);
   oni.clear();
   $('danger').style.opacity = 0;
+  $('oniDist').classList.add('hidden');
   sfx.finish();
   launchFireworks(8, true, 0.35);
   unlockPointer();

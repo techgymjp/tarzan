@@ -15,6 +15,7 @@ const S = {
   oniFound1: ['鬼に見つかった！', 'An oni spotted you!'],
   oniFoundN: ['鬼 {n} 匹に見つかった！', '{n} oni spotted you!'],
   oniChase: ['（追跡 {n}）', ' (chasing {n})'],
+  oniDist: ['👹 一番近い鬼 {d}m', '👹 Nearest oni {d}m'],
   caught: ['鬼に捕まった！', 'Caught by an oni!'],
   shareCaughtMission: ['ターザン大東京「{m}」でチェックポイント {i}/{n} まで行ったけど、鬼に捕まった…👹 得点 {s}pt #ターザン大東京',
     'Made it to checkpoint {i}/{n} on "{m}" in Tarzan Dai-Tokyo, then an oni caught me… 👹 Score {s}pt #TarzanDaiTokyo'],
@@ -141,7 +142,7 @@ const STATIC_EN = {
       <li>Keep holding W A S D (stick) to speed up</li>
       <li>Land on the roof of a named building to add it to your collection</li>`,
   back: 'Back', dexH: 'Building collection', pauseH: 'Paused', resume: 'Resume', retryBtn: '<b>Restart</b>', quitBtn: '<b>Title</b>',
-  resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 55,000 PLATEAU buildings',
+  resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 63,000 PLATEAU buildings',
   tJump: 'JUMP',
 };
 export function applyStatic() {

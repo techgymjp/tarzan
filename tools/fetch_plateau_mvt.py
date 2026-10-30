@@ -7,10 +7,10 @@
   https://indigo-lab.github.io/plateau-tokyo23ku-building-mvt-2020/
 
 使い方:
-  python3 tools/fetch_plateau_mvt.py 緯度南 緯度北 経度西 経度東 > extra.json
+  python3 tools/fetch_plateau_mvt.py 緯度南 緯度北 経度西 経度東 [最低の高さm] > extra.json
   → [{"r": [[緯度, 経度], ...], "h": 高さm, "n": 名前}, ...]  (tools/build_city.py が読む)
 """
-import json, math, sys, urllib.request
+import json, math, sys, urllib.error, urllib.request
 
 Z = 16
 URL = 'https://indigo-lab.github.io/plateau-tokyo23ku-building-mvt-2020/{z}/{x}/{y}.pbf'
@@ -142,6 +142,7 @@ def decode(b):
 
 def main():
     s, n, w, e = map(float, sys.argv[1:5])
+    min_h = float(sys.argv[5]) if len(sys.argv) > 5 else 0  # これより低い建物は出さない (ファイルを小さく)
     def tx(lon): return (lon + 180) / 360 * 2 ** Z
     def ty(lat):
         r = math.radians(lat)
@@ -153,11 +154,16 @@ def main():
     out, seen = [], set()
     for X in range(int(tx(w)), int(tx(e)) + 1):
         for Y in range(int(ty(n)), int(ty(s)) + 1):
-            with urllib.request.urlopen(URL.format(z=Z, x=X, y=Y)) as res:
-                feats = decode(res.read())
+            try:
+                with urllib.request.urlopen(URL.format(z=Z, x=X, y=Y), timeout=30) as res:
+                    feats = decode(res.read())
+            except urllib.error.HTTPError as err:
+                if err.code == 404:  # 建物のないタイル (23区の外など)
+                    continue
+                raise
             for props, rs, ext in feats:
                 h = props.get('measuredHeight')
-                if not isinstance(h, (int, float)) or h <= 0:
+                if not isinstance(h, (int, float)) or h <= 0 or h < min_h:
                     continue
                 # 外側の輪 (MVT では y が下向きの座標で時計回り。area2 は負になる) だけを使う。穴は無視
                 for r in rs:

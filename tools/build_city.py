@@ -17,7 +17,8 @@ data/plateau-extra.json で補う (重なる建物は1つにする)。
   python3 tools/fetch_plateau_mvt.py 35.669 35.695 139.735 139.763 > data/plateau-extra.json
   python3 tools/fetch_plateau_mvt.py 35.693 35.722 139.762 139.804 > data/plateau-akiba-ueno-asakusa.json
   python3 tools/fetch_plateau_mvt.py 35.668 35.686 139.722 139.7352 > data/plateau-akasaka.json
-  python3 tools/build_city.py <shutoko の js ディレクトリ> data/plateau-extra.json data/plateau-akasaka.json:10 data/plateau-akiba-ueno-asakusa.json:15 > js/city-data.js
+  python3 tools/fetch_plateau_mvt.py 35.645 35.712 139.690 139.785 25 > data/plateau-tall.json   # 街の中の抜け (高さ25m以上)
+  python3 tools/build_city.py <shutoko の js ディレクトリ> data/plateau-extra.json data/plateau-akasaka.json:10 data/plateau-akiba-ueno-asakusa.json:15 data/plateau-tall.json > js/city-data.js
 """
 import glob, json, math, sys
 
@@ -68,6 +69,9 @@ REPLACE = [
     (35.67960, 139.76630, 30), (35.68040, 139.76670, 30), (35.68120, 139.76710, 30), (35.68200, 139.76750, 30), (35.68280, 139.76790, 30),
     (35.67480, 139.73970, 28),   # 日枝神社 社殿
     (35.67670, 139.73130, 26),   # 豊川稲荷
+    (35.65860, 139.74540, 75),   # 東京タワー (手作り)
+    (35.67870, 139.72630, 70),   # 東宮御所 (手作り)
+    (35.68000, 139.73420, 30),   # ホテルニューオータニ本館 (手作り)
 ]
 rep_xy = [((lo - LON0) * KX, -(la - LAT0) * KZ, r) for la, lo, r in REPLACE]
 

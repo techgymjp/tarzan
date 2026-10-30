@@ -255,7 +255,7 @@ export class Player {
     this.scarfMesh.frustumCulled = false;
     scene.add(this.scarfMesh);
     // ロープ
-    const rg = new THREE.CylinderGeometry(0.05, 0.05, 1, 5, 1, true);
+    const rg = new THREE.CylinderGeometry(0.025, 0.025, 1, 5, 1, true);
     rg.translate(0, 0.5, 0);
     this.ropeMesh = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0xfff1c8 }));
     this.ropeMesh.frustumCulled = false;
