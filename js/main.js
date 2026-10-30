@@ -1321,7 +1321,8 @@ function update(dt) {
       const ang = Math.atan2(-dx, -dz) - cam.yaw;
       $('navArrow').style.transform = `rotate(${-ang}rad)`;
       const dy = cur.pos.y - player.p.y;
-      $('navText').textContent = `${cur.label} ${Math.round(Math.hypot(dx, dz))}m ${dy > 8 ? '▲' : dy < -8 ? '▼' : ''}`;
+      const goal = game.ringIdx === rings.length - 1 ? '🏁 ゴール ' : '';
+      $('navText').textContent = `${goal}${cur.label} ${Math.round(Math.hypot(dx, dz))}m ${dy > 8 ? '▲' : dy < -8 ? '▼' : ''}`;
     }
   } else {
     $('dex').textContent = `📖 ${dex.size} / ${DEX_ALL.length}`;
