@@ -4,8 +4,8 @@ import * as THREE from '../vendor/three.module.min.js';
 
 export const CATCH_RADIUS = 6;
 const SCALE = 2.6;
-const DETECT = 280;      // この距離にプレイヤーが入ると見つかる (m)
-const LOSE = 420;        // これより離れると見失う
+const DETECT = 150;      // この距離にプレイヤーが入ると見つかる (m)。見失う距離より短くしておく
+const LOSE = 200;        // これより離れると見失う (追いかけてくる鬼が全員これより離れると、ふだんの BGM に戻る)
 const WANDER_SPEED = 6;
 const WANDER_RADIUS = 300; // 持ち場のまわりをうろつく範囲
 const SEPARATION = 35;   // 追いかける鬼どうしがこれより近いと離れる
