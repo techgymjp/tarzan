@@ -98,7 +98,7 @@ export function addTokyoTower(scene, city) {
   scene.add(light);
 
   // 当たり判定
-  city.addBox(X, Z + 55, 90, 70, 0, 18, '東京タワー フットタウン');
+  city.addBox(X, Z + 55, 90, 70, 0, 18, '東京タワー フットタウン').roof = true;
   const leg = 10;
   for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
     for (let y = 0; y < 60; y += 15) {
@@ -110,7 +110,7 @@ export function addTokyoTower(scene, city) {
     const s = w(y + 6);
     city.addBox(X, Z, s, s, y, y + 12, '東京タワー');
   }
-  city.addBox(X, Z, 46, 46, 144, 159, '東京タワー メインデッキ');
+  city.addBox(X, Z, 46, 46, 144, 159, '東京タワー メインデッキ').roof = true;
   city.addBox(X, Z, 3, 3, 300, 345, '東京タワー');
   return { light, mats: [glassMat], glow: [beamMat, beamWhite, mat], pos: [X, Z] };
 }
@@ -131,7 +131,7 @@ export function addDiet(scene, city) {
   const pyr = add(new THREE.ConeGeometry(17, 14, 4), roof, 0, 64, 0);
   pyr.rotation.y = Math.PI / 4;
   scene.add(g);
-  city.addBox(X, Z, 206, 70, 0, 21, '国会議事堂');
+  city.addBox(X, Z, 206, 70, 0, 21, '国会議事堂').roof = true;
   city.addBox(X, Z, 34, 34, 0, 47, '国会議事堂 中央塔');
   city.addBox(X, Z, 26, 26, 47, 57, '国会議事堂 中央塔');
   city.addBox(X, Z, 12, 12, 57, 70, '国会議事堂 中央塔');
@@ -338,7 +338,7 @@ export function addTechGym(scene, city) {
   const cs = Math.cos(rot), sn = Math.sin(rot);
   const corner = (lx, lz) => [X + lx * cs + lz * sn, Z - lx * sn + lz * cs];
   const rect = (w, d) => [...corner(-w / 2, -d / 2), ...corner(w / 2, -d / 2), ...corner(w / 2, d / 2), ...corner(-w / 2, d / 2)];
-  city.addPrism(rect(W, D), 0, H + 1.2, 'テックジム東京本校');
+  city.addPrism(rect(W, D), 0, H + 1.2, 'テックジム東京本校').roof = true;
   city.addPrism(rect(6, 6), H + 1.2, TOP - 12, 'テックジムの鉄塔');
   city.addPrism(rect(41, 1.2), TOP - 12.75, TOP + 0.75, 'テックジムの看板');
   city.addBox(X, Z, BR * 1.6, BR * 1.6, BY - BR * 0.8, BY + BR * 0.8, 'テックジムのアドバルーン');

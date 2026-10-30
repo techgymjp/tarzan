@@ -288,35 +288,76 @@ function updateDexCount() {
 updateDexCount();
 
 // ---------- ミッション ----------
-const ringGeo = new THREE.TorusGeometry(11, 0.9, 10, 40);
+// チェックポイント: 屋上に置いた光の玉 (指定地点の近くで高い屋上を選ぶ)
+const orbGeo = new THREE.SphereGeometry(2.6, 24, 16);
+const haloTex = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,240,180,1)');
+  gr.addColorStop(0.3, 'rgba(255,200,80,0.6)');
+  gr.addColorStop(1, 'rgba(255,160,40,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+})();
 let rings = [];
 function clearRings() {
   for (const r of rings) scene.remove(r.mesh);
   rings = [];
 }
+// 屋上の内側の点
+function roofPoint(bd) {
+  for (let k = 0; k <= 10; k++) {
+    const t = k / 10;
+    for (let i = 0; i < bd.n; i++) {
+      const qx = bd.cx * (1 - t) + bd.pts[i * 2] * t, qz = bd.cz * (1 - t) + bd.pts[i * 2 + 1] * t;
+      if (city.inside(bd, qx, qz)) return [qx, qz];
+    }
+  }
+  return [bd.cx, bd.cz];
+}
+// (x, z) の近くで、高くて近い屋上 (PLATEAU のビルか、屋上に立てる名所)。label と同じ名前の屋上があればそれ
+function pickRoof(x, z, label) {
+  if (label) {
+    // 同じ名前の屋上 (複数あれば一番高いもの)
+    let named = null;
+    for (const bd of city.bld) if (bd.name === label && Math.hypot(bd.cx - x, bd.cz - z) < 400 && (!named || bd.h > named.h)) named = bd;
+    if (named) return named;
+  }
+  for (const rad of [100, 220]) {
+    let best = null, bs = -1e9;
+    const r = Math.ceil(rad / 30);
+    for (let gx = -r; gx <= r; gx++) for (let gz = -r; gz <= r; gz++) {
+      for (const bd of city.cell(x + gx * 30, z + gz * 30) || []) {
+        if (!(bd.plateau || bd.roof) || bd.area < 60) continue;
+        const d = Math.hypot(bd.cx - x, bd.cz - z);
+        if (d > rad) continue;
+        const sc = Math.min(bd.h, 200) - d * 0.6;
+        if (sc > bs) { bs = sc; best = bd; }
+      }
+    }
+    if (best) return best;
+  }
+  return null;
+}
 function setupRings(m) {
   clearRings();
-  let prev = startPoint(m);
-  m.rings.forEach(([x, z, label, hy], i) => {
-    let y = hy, px = x, pz = z;
-    if (y === undefined) {
-      const mh = city.maxHeightNear(x, z, 120);
-      y = THREE.MathUtils.clamp(mh * 0.55, 28, 110);
-      [px, pz] = city.findOpenSpot(x, z, y);
-    }
-    const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffc53a, transparent: true, opacity: 0.9, fog: false }));
+  for (const [x, z, label] of m.rings) {
+    const bd = pickRoof(x, z, label);
+    const [px, pz] = bd ? roofPoint(bd) : [x, z];
+    const y = (bd ? bd.h : 0) + 4;
+    const mesh = new THREE.Group();
+    const orb = new THREE.Mesh(orbGeo, new THREE.MeshBasicMaterial({ color: 0xfff0b0, fog: false }));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+    halo.scale.set(16, 16, 1);
+    mesh.add(orb, halo);
     mesh.position.set(px, y, pz);
+    mesh.userData = { orb, halo };
     scene.add(mesh);
-    rings.push({ mesh, label, pos: mesh.position, done: false });
-    prev = [px, y, pz];
-  });
-  // 輪の向き: 前の輪から次の輪へ
-  rings.forEach((r, i) => {
-    const a = i > 0 ? rings[i - 1].pos : new THREE.Vector3(...startPoint(m));
-    const b = rings[i + 1] ? rings[i + 1].pos : r.pos.clone().add(r.pos.clone().sub(a));
-    const d = b.clone().sub(a); d.y *= 0.3;
-    r.mesh.lookAt(r.pos.clone().add(d));
-  });
+    rings.push({ mesh, label, pos: mesh.position, base: y, bd, done: false });
+  }
 }
 
 // スタートする屋上: 指定点を含む建物 (なければ近くで高い建物)
@@ -443,7 +484,7 @@ function gameOver() {
   const m = game.mission;
   $('resTitle').textContent = '鬼に捕まった！';
   $('resStars').textContent = '👹';
-  $('resBody').innerHTML = `${m.title}<br>${game.mode === 'mission' ? `輪 ${game.ringIdx} / ${rings.length} ・ ${fmt(game.t)}` : `図鑑 ${dex.size} / ${DEX_ALL.length} 棟`}<br>
+  $('resBody').innerHTML = `${m.title}<br>${game.mode === 'mission' ? `チェックポイント ${game.ringIdx} / ${rings.length} ・ ${fmt(game.t)}` : `図鑑 ${dex.size} / ${DEX_ALL.length} 棟`}<br>
     得点 <b>${Math.round(game.score).toLocaleString()}</b> pt<br>
     最大コンボ ${game.maxCombo} ／ 着地成功 ${game.landings} 回 ／ 最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h`;
   setTimeout(() => {
@@ -989,14 +1030,22 @@ function update(dt) {
   // 輪
   if (game.mode === 'mission') {
     const cur = rings[game.ringIdx];
+    const tt = clock.elapsedTime;
     rings.forEach((r, i) => {
       r.mesh.visible = !r.done && i <= game.ringIdx + 2;
-      r.mesh.material.opacity = i === game.ringIdx ? 0.95 : 0.4;
-      if (i === game.ringIdx) r.mesh.rotation.z += dt * 0.8;
+      const now = i === game.ringIdx;
+      // 次の玉は大きく脈打ち、ふわふわ上下する
+      const pulse = now ? 1 + Math.sin(tt * 4) * 0.15 : 0.6;
+      r.mesh.userData.orb.scale.setScalar(pulse);
+      // 遠くからも見つけやすいよう、次の玉の光は離れるほど大きく
+      const far = now ? Math.max(18, camera.position.distanceTo(r.pos) * 0.07) : 9;
+      r.mesh.userData.halo.scale.setScalar(far * pulse);
+      r.mesh.userData.halo.material.opacity = now ? 1 : 0.5;
+      r.pos.y = r.base + Math.sin(tt * 2 + i) * 0.8;
     });
     if (cur) {
       const c = player.p.clone(); c.y += 1;
-      if (c.distanceTo(cur.pos) < 13) {
+      if (c.distanceTo(cur.pos) < 7) {
         cur.done = true;
         game.ringIdx++;
         game.score += 500;
@@ -1069,7 +1118,7 @@ function update(dt) {
   $('combo').innerHTML = game.combo >= 2 ? `${game.combo}<small>COMBO ×${(1 + Math.min(game.combo, 30) * 0.25).toFixed(2)}</small>` : '';
   if (game.mode === 'mission') {
     $('timer').textContent = fmt(game.t);
-    $('rings').textContent = `◎ ${game.ringIdx} / ${rings.length}`;
+    $('rings').textContent = `✦ ${game.ringIdx} / ${rings.length}`;
     const cur = rings[game.ringIdx];
     if (cur) {
       const dx = cur.pos.x - player.p.x, dz = cur.pos.z - player.p.z;
