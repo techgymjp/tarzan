@@ -7,14 +7,14 @@ js/water-data.js を作る。座標は街の座標 (tools/build_city.py と同�
 使い方:
   python3 tools/fetch_water.py > js/water-data.js
 """
-import json, math, sys, urllib.request
+import json, math, sys, urllib.error, urllib.request
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 from fetch_plateau_mvt import decode, area2  # MVT の読み取りは共通
 
 Z = 15
 URL = 'https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf'
-LAT_MIN, LAT_MAX = 35.640, 35.726
+LAT_MIN, LAT_MAX = 35.612, 35.742
 LON_MIN, LON_MAX = 139.685, 139.808
 LAT0, LON0 = 35.6740, 139.7450
 KX = 111320 * math.cos(math.radians(LAT0))
@@ -62,11 +62,18 @@ def main():
     polys = []  # [外側の輪, 穴, 穴, ...]  (輪は [x0, z0, x1, z1, ...])
     for X in range(int(tx(LON_MIN)), int(tx(LON_MAX)) + 1):
         for Y in range(int(ty(LAT_MAX)), int(ty(LAT_MIN)) + 1):
-            try:
-                with urllib.request.urlopen(URL.format(z=Z, x=X, y=Y), timeout=30) as res:
-                    feats = decode_layer(res.read(), 'waterarea')
-            except Exception as e:
-                sys.stderr.write(f'tile {X},{Y}: {e}\n')
+            feats = None
+            for attempt in range(4):  # 通信が切れたら何回かやり直す
+                try:
+                    with urllib.request.urlopen(URL.format(z=Z, x=X, y=Y), timeout=30) as res:
+                        feats = decode_layer(res.read(), 'waterarea')
+                    break
+                except urllib.error.HTTPError as e:
+                    sys.stderr.write(f'tile {X},{Y}: {e}\n')
+                    break
+                except Exception as e:
+                    sys.stderr.write(f'tile {X},{Y}: {e} (retry)\n')
+            if feats is None:
                 continue
             for rs, ext in feats:
                 cur = None

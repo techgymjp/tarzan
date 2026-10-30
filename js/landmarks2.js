@@ -341,20 +341,28 @@ export function addRailways(scene, city) {
       r.rotation.y = rot;
     }
     const hx = x + cs * 20, hz = z - sn * 20;
+    stations[name] = [hx, hz];
+    if (name === '高輪ゲートウェイ駅') return; // 駅舎は手作りの大屋根の下にあるので省く
     const hs = mesh(new THREE.BoxGeometry(14, 8, 30), houseM, hx, 4, hz, g);
     hs.rotation.y = rot;
     city.addPrism(rectPts(hx, hz, rot, 0, 0, 14, 30), 0, 8, name).roof = true;
-    stations[name] = [hx, hz];
   };
   const g = new THREE.Group();
   for (const [la, lo, n] of [[35.70210, 139.75330, '水道橋駅'], [35.70200, 139.74510, '飯田橋駅'], [35.69160, 139.73570, '市ケ谷駅'], [35.68600, 139.73010, '四ツ谷駅'], [35.68020, 139.72060, '信濃町駅'], [35.68120, 139.71130, '千駄ケ谷駅'], [35.68330, 139.70180, '代々木駅'], [35.68960, 139.70040, '新宿駅']]) station(west, la, lo, n, n === '新宿駅' ? 260 : 160);
   station(sobu, 35.69745, 139.78600, '浅草橋駅');
+  // 山手線 (黄緑): 高田馬場 → 目白 → 池袋 → 大塚、田町 → 高輪ゲートウェイ → 品川
+  const yamaN = railLine(scene, city, [[35.71150, 139.70330], [35.71250, 139.70380], [35.72120, 139.70660], [35.72600, 139.70950], [35.72950, 139.71090], [35.73300, 139.71250], [35.73350, 139.71800], [35.73180, 139.72860]], 3, deckMat, sideMat, null, '山手線');
+  const yamaS = railLine(scene, city, [[35.64700, 139.74850], [35.64570, 139.74760], [35.64000, 139.74400], [35.63550, 139.74070], [35.63200, 139.73950], [35.62850, 139.73870], [35.61800, 139.73900]], 3, deckMat, sideMat, null, '山手線');
+  for (const [la, lo, n] of [[35.71250, 139.70380, '高田馬場駅'], [35.72120, 139.70660, '目白駅'], [35.72950, 139.71090, '池袋駅'], [35.73180, 139.72860, '大塚駅']]) station(yamaN, la, lo, n, n === '池袋駅' ? 260 : 160);
+  for (const [la, lo, n] of [[35.64570, 139.74760, '田町駅'], [35.63550, 139.74070, '高輪ゲートウェイ駅'], [35.62850, 139.73870, '品川駅']]) station(yamaS, la, lo, n, n === '品川駅' ? 260 : 160);
   scene.add(g);
   const lines = [
     { line: sobu, cars: train(scene, 0xf5c400, 10), speed: 14, d: 0, dir: 1 },
     { line: chuo, cars: train(scene, 0xf15a22, 10), speed: 12, d: chuo.L * 0.6, dir: -1 },
     { line: west, cars: train(scene, 0xf5c400, 10), speed: 15, d: west.L * 0.3, dir: 1 },
     { line: west, cars: train(scene, 0xf5c400, 10), speed: 15, d: west.L * 0.75, dir: -1 },
+    { line: yamaN, cars: train(scene, 0x9acd32, 11), speed: 14, d: yamaN.L * 0.5, dir: 1 },
+    { line: yamaS, cars: train(scene, 0x9acd32, 11), speed: 14, d: yamaS.L * 0.5, dir: -1 },
   ];
   return {
     sobu: sobu.at(sobu.L * 0.42), manseibashi: chuo.at(chuo.L * 0.62), stations,
@@ -727,4 +735,44 @@ export function addYotsuyaKudan(scene, city) {
   hallBuilding(g, city, GX, GZ, Math.PI / 2, 0, 0, 20, 9, 8, 5, wood, copper, '靖国神社 神門');
   scene.add(g);
   return { suga: [SX, SZ], sugaSteps: [AX, AZ], mod: [MX, MZ, mh], yasukuni: [YX, YZ], yasukuniTorii: [Y1X, Y1Z] };
+}
+
+// ---------- 池袋・品川: 護国寺・雑司が谷 鬼子母神・泉岳寺・高輪ゲートウェイ駅の白い大屋根 ----------
+export function addIkebukuroShinagawa(scene, city) {
+  const g = new THREE.Group();
+  const wood = M(0x5a4632), copper = M(0x4d5a55), roofM = M(0x3e4448);
+  // 護国寺: 南向きの大きな本堂と仁王門
+  const [GX, GZ] = ll(35.71820, 139.72720);
+  hallBuilding(g, city, GX, GZ, 0, 0, 0, 34, 28, 10, 10, wood, roofM, '護国寺 本堂');
+  const [NX, NZ] = ll(35.71600, 139.72720);
+  hallBuilding(g, city, NX, NZ, 0, 0, 0, 14, 7, 7, 5, M(VERM), roofM, '護国寺 仁王門');
+  // 雑司が谷 鬼子母神: 小さなお堂
+  const [KX, KZ] = ll(35.72000, 139.71350);
+  hallBuilding(g, city, KX, KZ, 0, 0, 0, 12, 10, 5, 5, wood, copper, '雑司が谷 鬼子母神');
+  // 泉岳寺: 東 (第一京浜) を向いた本堂と山門
+  const [SX, SZ] = ll(35.63850, 139.73850);
+  hallBuilding(g, city, SX, SZ, Math.PI / 2, 0, 0, 20, 16, 7, 7, wood, roofM, '泉岳寺 本堂');
+  hallBuilding(g, city, SX, SZ, Math.PI / 2, 0, 90, 10, 8, 7, 5, wood, roofM, '泉岳寺 山門');
+  // 高輪ゲートウェイ駅: 折り紙のような白い大屋根 (線路に沿って南北に長い)
+  const [TX, TZ] = ll(35.63550, 139.74070);
+  const pos = [], idx = [];
+  const ROWS = 9, LEN = 120, W = 54;
+  for (let i = 0; i < ROWS; i++) {
+    const z = TZ - LEN / 2 + i * LEN / (ROWS - 1);
+    const top = 24 + (i % 2 ? 5 : 0);
+    pos.push(TX - W / 2, 15, z, TX, top, z, TX + W / 2, 15, z);
+    if (i) {
+      const a = (i - 1) * 3, b = i * 3;
+      idx.push(a, b, a + 1, a + 1, b, b + 1, a + 1, b + 1, a + 2, a + 2, b + 1, b + 2);
+    }
+  }
+  const rg = new THREE.BufferGeometry();
+  rg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  rg.setIndex(idx);
+  rg.computeVertexNormals();
+  g.add(new THREE.Mesh(rg, new THREE.MeshLambertMaterial({ color: 0xf4f4f0, side: THREE.DoubleSide })));
+  for (const sx of [-1, 1]) for (let i = 0; i < 5; i++) mesh(new THREE.CylinderGeometry(0.6, 0.6, 15, 8), M(0xdcdcd6), TX + sx * 22, 7.5, TZ - 48 + i * 24, g);
+  city.addBox(TX, TZ, W, LEN, 15, 24).roof = true;
+  scene.add(g);
+  return { gokokuji: [GX, GZ], kishimojin: [KX, KZ], sengakuji: [SX, SZ], takanawa: [TX, TZ] };
 }

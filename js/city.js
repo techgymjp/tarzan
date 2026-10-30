@@ -365,29 +365,59 @@ export class City {
   }
 
   // ---------- 描画 ----------
+  // 建物は 480m 四方のタイルごとにまとめる。全部を一度に GPU に載せず、カメラのまわりのタイルだけを組み立てて描き、
+  // 遠くなったタイルは捨てる (スマホでも軽く。コースを選ぶと、スタートのまわりから先に組み立てる)
   buildMeshes(scene, mats) {
     const TILE = 480;
-    const tiles = new Map();
-    const tile = (bd) => {
-      const key = Math.floor(bd.cx / TILE) + ',' + Math.floor(bd.cz / TILE);
-      let t = tiles.get(key);
-      if (!t) tiles.set(key, t = { glass: newBuf(), office: newBuf(), roof: newBuf() });
-      return t;
-    };
-    function newBuf() { return { p: [], n: [], uv: [], c: [] }; }
+    this.tiles = new Map();
+    this.tileMats = mats;
+    this.tileGroup = new THREE.Group();
+    scene.add(this.tileGroup);
+    this.boxMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    this.boxGeo = new THREE.BoxGeometry(1, 1, 1);
+    this.boxGeo.translate(0, 0.5, 0);
+    this.bld.forEach((bd, idx) => {
+      if (!bd.plateau) return;
+      const tx = Math.floor(bd.cx / TILE), tz = Math.floor(bd.cz / TILE);
+      const key = tx + ',' + tz;
+      let t = this.tiles.get(key);
+      if (!t) this.tiles.set(key, t = { cx: (tx + 0.5) * TILE, cz: (tz + 0.5) * TILE, list: [], boxes: [], meshes: null });
+      t.list.push(idx);
+      // 屋上の設備 (空調機・給水塔・塔屋)。当たり判定は最初に全部入れる (ビルごとに決まった乱数で、いつ組み立てても同じ形)
+      if (bd.area < 250) return;
+      let seed = (idx * 7919 + 13) % 2147483647 || 1;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const k = Math.min(4, 1 + Math.floor(bd.area / 900));
+      for (let j = 0; j < k; j++) {
+        const sz = Math.sqrt(bd.area) * (0.12 + rnd() * 0.18);
+        const x = bd.cx + (rnd() - 0.5) * (bd.maxx - bd.minx) * 0.5;
+        const z = bd.cz + (rnd() - 0.5) * (bd.maxz - bd.minz) * 0.5;
+        const hh = 1.5 + rnd() * (bd.h > 60 ? 5 : 2.5), r = rnd();
+        if (!this.inside(bd, x - sz / 2, z - sz / 2) || !this.inside(bd, x + sz / 2, z + sz / 2)) continue;
+        const w = sz * (0.7 + r * 0.6);
+        this.addBox(x, z, w, sz, bd.h - 0.5, bd.h + hh);
+        t.boxes.push(x, bd.h, z, w, hh, sz, r);
+      }
+    });
+    return this.tileGroup;
+  }
+
+  // 1つのタイルのメッシュを組み立てる
+  buildTile(t) {
+    const mats = this.tileMats;
+    const buf = { glass: { p: [], n: [], uv: [], c: [] }, office: { p: [], n: [], uv: [], c: [] }, roof: { p: [], n: [], uv: [], c: [] } };
     const col = new THREE.Color();
-    let seed = 12345;
-    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     // カラフルな街: 高いビルは色ガラス、低いビルはパステルやビビッドな外壁
     const GLASS = [[0.35, 0.65, 1.0], [0.2, 0.85, 0.85], [0.6, 0.45, 1.0], [1.0, 0.45, 0.7], [0.4, 0.95, 0.55],
       [1.0, 0.75, 0.3], [0.95, 0.35, 0.35], [0.55, 0.8, 1.0], [0.9, 0.9, 0.35], [0.3, 0.5, 0.95]];
     const OFFICE = [[1.0, 0.6, 0.55], [1.0, 0.82, 0.45], [0.6, 0.85, 0.6], [0.55, 0.75, 1.0], [0.85, 0.65, 1.0],
       [1.0, 0.7, 0.85], [0.5, 0.9, 0.85], [1.0, 0.95, 0.6], [0.95, 0.55, 0.35], [0.7, 0.95, 0.45], [0.95, 0.95, 0.95]];
-    for (const bd of this.bld) {
-      if (!bd.plateau) continue;
-      const t = tile(bd);
+    for (const idx of t.list) {
+      const bd = this.bld[idx];
+      let seed = (idx * 48271 + 7) % 2147483647 || 1;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
       const glass = bd.h > 55 || (bd.h > 30 && rnd() < 0.35);
-      const B = glass ? t.glass : t.office;
+      const B = glass ? buf.glass : buf.office;
       const pal = glass ? GLASS : OFFICE;
       const c = pal[Math.floor(rnd() * pal.length)];
       const sh = 0.85 + rnd() * 0.2;
@@ -422,59 +452,63 @@ export class City {
         const [a, b2, c2] = tr;
         const ax = P[a * 2], az = P[a * 2 + 1], bx = P[b2 * 2], bz = P[b2 * 2 + 1], cx = P[c2 * 2], cz = P[c2 * 2 + 1];
         const ny = (bz - az) * (cx - ax) - (bx - ax) * (cz - az);
-        if (ny >= 0) t.roof.p.push(ax, h, az, bx, h, bz, cx, h, cz);
-        else t.roof.p.push(ax, h, az, cx, h, cz, bx, h, bz);
-        for (let k = 0; k < 3; k++) { t.roof.n.push(0, 1, 0); t.roof.c.push(rr, rg, rb); }
-        t.roof.uv.push(ax / 8, az / 8, bx / 8, bz / 8, cx / 8, cz / 8);
+        if (ny >= 0) buf.roof.p.push(ax, h, az, bx, h, bz, cx, h, cz);
+        else buf.roof.p.push(ax, h, az, cx, h, cz, bx, h, bz);
+        for (let k = 0; k < 3; k++) { buf.roof.n.push(0, 1, 0); buf.roof.c.push(rr, rg, rb); }
+        buf.roof.uv.push(ax / 8, az / 8, bx / 8, bz / 8, cx / 8, cz / 8);
       }
     }
-    // 屋上の設備 (空調機・給水塔・塔屋)
-    const boxes = [];
-    for (const bd of this.bld) {
-      if (!bd.plateau || bd.area < 250) continue;
-      const k = Math.min(4, 1 + Math.floor(bd.area / 900));
-      for (let j = 0; j < k; j++) {
-        const s = Math.sqrt(bd.area) * (0.12 + rnd() * 0.18);
-        const x = bd.cx + (rnd() - 0.5) * (bd.maxx - bd.minx) * 0.5;
-        const z = bd.cz + (rnd() - 0.5) * (bd.maxz - bd.minz) * 0.5;
-        if (!this.inside(bd, x - s / 2, z - s / 2) || !this.inside(bd, x + s / 2, z + s / 2)) continue;
-        boxes.push([x, bd.h, z, s, 1.5 + rnd() * (bd.h > 60 ? 5 : 2.5), rnd()]);
-      }
+    t.meshes = [];
+    for (const k of ['glass', 'office', 'roof']) {
+      const B = buf[k];
+      if (!B.p.length) continue;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(B.p, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(B.n, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(B.c, 3));
+      g.computeBoundingSphere();
+      const mesh = new THREE.Mesh(g, mats[k]);
+      this.tileGroup.add(mesh);
+      t.meshes.push(mesh);
     }
-    const bg = new THREE.BoxGeometry(1, 1, 1);
-    bg.translate(0, 0.5, 0);
-    const bm = new THREE.InstancedMesh(bg, new THREE.MeshLambertMaterial({ color: 0xffffff }), boxes.length);
-    const m4 = new THREE.Matrix4();
-    boxes.forEach(([x, y, z, s, hh, r], i) => {
-      m4.makeScale(s * (0.7 + r * 0.6), hh, s).setPosition(x, y, z);
-      bm.setMatrixAt(i, m4);
-      // 屋上の設備にも当たる (中に入り込まないように)
-      this.addBox(x, z, s * (0.7 + r * 0.6), s, y - 0.5, y + hh);
-      bm.setColorAt(i, col.setRGB(0.62 + r * 0.25, 0.63 + r * 0.25, 0.64 + r * 0.25));
-    });
-    scene.add(bm);
-    const group = new THREE.Group();
-    for (const t of tiles.values()) {
-      for (const [k, m] of [['glass', mats.glass], ['office', mats.office], ['roof', mats.roof]]) {
-        const B = t[k];
-        if (!B.p.length) continue;
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.Float32BufferAttribute(B.p, 3));
-        g.setAttribute('normal', new THREE.Float32BufferAttribute(B.n, 3));
-        g.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
-        g.setAttribute('color', new THREE.Float32BufferAttribute(B.c, 3));
-        g.computeBoundingSphere();
-        const mesh = new THREE.Mesh(g, m);
-        mesh.castShadow = false;
-        mesh.receiveShadow = false;
-        group.add(mesh);
+    const nb = t.boxes.length / 7;
+    if (nb) {
+      const bm = new THREE.InstancedMesh(this.boxGeo, this.boxMat, nb);
+      const m4 = new THREE.Matrix4();
+      for (let i = 0; i < nb; i++) {
+        const [x, y, z, w, hh, sz, r] = t.boxes.slice(i * 7, i * 7 + 7);
+        m4.makeScale(w, hh, sz).setPosition(x, y, z);
+        bm.setMatrixAt(i, m4);
+        bm.setColorAt(i, col.setRGB(0.62 + r * 0.25, 0.63 + r * 0.25, 0.64 + r * 0.25));
       }
+      bm.computeBoundingSphere();
+      this.tileGroup.add(bm);
+      t.meshes.push(bm);
     }
-    scene.add(group);
-    return group;
   }
 
-  // 首都高の高架
+  dropTile(t) {
+    for (const m of t.meshes) {
+      this.tileGroup.remove(m);
+      if (m.isInstancedMesh) m.dispose(); else m.geometry.dispose();
+    }
+    t.meshes = null;
+  }
+
+  // カメラ (x, z) から半径 R のタイルを用意し、R + 600 より遠いものは捨てる。budget: 1回に組み立てるタイルの数 (多いとカクつく)
+  streamTiles(x, z, R, budget = 1) {
+    const want = [];
+    for (const t of this.tiles.values()) {
+      const d = Math.hypot(t.cx - x, t.cz - z) - 340; // タイルの端までの距離 (おおよそ)
+      if (t.meshes) { if (d > R + 600) this.dropTile(t); }
+      else if (d < R) want.push([d, t]);
+    }
+    want.sort((a, b) => a[0] - b[0]);
+    for (let i = 0; i < Math.min(budget, want.length); i++) this.buildTile(want[i][1]);
+    return want.length - Math.min(budget, want.length); // まだ残っている数
+  }
+
   buildRoads(scene) {
     const deck = { p: [], n: [], c: [] };
     const push = (B, a, b, c, n, col) => {
