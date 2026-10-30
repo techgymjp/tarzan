@@ -597,3 +597,77 @@ export function addTogu(scene, city) {
   scene.add(g);
   return { pos: [X, Z] };
 }
+
+// 皇居の門: 外桜田門 (石垣の上の白い渡櫓門 + 手前の高麗門) と半蔵門 (高麗門 + 両側の石垣)
+function koraiGate(g, x, z, rot, w) {
+  const dark = new THREE.MeshLambertMaterial({ color: 0x2f2a26 });
+  const roofM = new THREE.MeshLambertMaterial({ color: 0x3e4448 });
+  const b = new THREE.Group();
+  b.position.set(x, 0, z);
+  b.rotation.y = rot;
+  for (const s of [-1, 1]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(1.2, 7, 1.2), dark);
+    post.position.set(s * w / 2, 3.5, 0);
+    b.add(post);
+  }
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 1, 1.4), dark);
+  beam.position.y = 7;
+  b.add(beam);
+  const roof = new THREE.Mesh(hipGeo, roofM);
+  roof.scale.set(w + 5, 2.4, 5);
+  roof.position.y = 8.6;
+  b.add(roof);
+  g.add(b);
+}
+export function addPalaceGates(scene, city) {
+  const stone = new THREE.MeshLambertMaterial({ color: 0x9a958b });
+  const white = new THREE.MeshLambertMaterial({ color: 0xf4f2ec });
+  const roofM = new THREE.MeshLambertMaterial({ color: 0x3e4448 });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x2f2a26 });
+  const g = new THREE.Group();
+  // 外桜田門: 渡櫓門 (石垣 + 白い櫓 + 黒い屋根、真ん中に門の口)
+  const [SX, SZ] = ll(35.67760, 139.75225);
+  const rot = 0.6;
+  const w = new THREE.Group();
+  w.position.set(SX, 0, SZ);
+  w.rotation.y = rot;
+  for (const s of [-1, 1]) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 14), stone);
+    wall.position.set(s * 14, 4, 0);
+    w.add(wall);
+  }
+  const yag = new THREE.Mesh(new THREE.BoxGeometry(46, 6, 11), white);
+  yag.position.y = 11;
+  w.add(yag);
+  const opening = new THREE.Mesh(new THREE.BoxGeometry(12, 8, 11.2), dark);
+  opening.position.y = 4;
+  w.add(opening);
+  const roof = new THREE.Mesh(hipGeo, roofM);
+  roof.scale.set(50, 4, 15);
+  roof.position.y = 16;
+  w.add(roof);
+  g.add(w);
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const rect = (lx, lz, ww, dd) => {
+    const c = (ax, az) => [SX + (lx + ax) * cs + (lz + az) * sn, SZ - (lx + ax) * sn + (lz + az) * cs];
+    return [...c(-ww / 2, -dd / 2), ...c(ww / 2, -dd / 2), ...c(ww / 2, dd / 2), ...c(-ww / 2, dd / 2)];
+  };
+  city.addPrism(rect(0, 0, 46, 11), 8, 18, '桜田門').roof = true;
+  city.addPrism(rect(-14, 0, 16, 14), 0, 8, '桜田門');
+  city.addPrism(rect(14, 0, 16, 14), 0, 8, '桜田門');
+  // 手前 (南東) の高麗門
+  koraiGate(g, SX + 22 * sn, SZ + 22 * cs, rot, 8);
+  // 半蔵門: 高麗門と両側の石垣
+  const [HX, HZ] = ll(35.68533, 139.74440);
+  const hrot = 1.15;
+  koraiGate(g, HX, HZ, hrot, 9);
+  const hs = Math.sin(hrot), hc = Math.cos(hrot);
+  for (const s of [-1, 1]) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(30, 7, 10), stone);
+    wall.position.set(HX + s * 22 * hc, 3.5, HZ - s * 22 * hs);
+    wall.rotation.y = hrot;
+    g.add(wall);
+  }
+  scene.add(g);
+  return { sakurada: [SX, SZ], hanzo: [HX, HZ] };
+}

@@ -82,7 +82,7 @@ const EN = {
   '東京ドーム': 'Tokyo Dome', '日本武道館': 'Nippon Budokan', '皇居': 'Imperial Palace', '皇居（宮殿）': 'Imperial Palace', '宮殿': 'Palace',
   '長和殿': 'Chowaden', '正殿': 'Seiden', '豊明殿': 'Homeiden', '表御座所': 'Omote Gozasho', '連翠': 'Rensui',
   '伏見櫓': 'Fushimi Turret', '富士見櫓': 'Fujimi Turret', '桜田巽櫓': 'Sakurada Tatsumi Turret', '二重橋': 'Nijubashi Bridge', '江戸城': 'Edo Castle', '天守台': 'Keep Base',
-  '東宮御所': 'Togu Palace', '東京スカイツリー': 'Tokyo Skytree',
+  '東宮御所': 'Togu Palace', '桜田門': 'Sakuradamon Gate', '半蔵門': 'Hanzomon Gate', '警視庁本部': 'Tokyo Metropolitan Police HQ', '首相官邸': "Prime Minister's Office", '自由民主党本部': 'LDP Headquarters', '国立国会図書館': 'National Diet Library', '最高裁判所': 'Supreme Court', '東京スカイツリー': 'Tokyo Skytree',
   // 著名なビル
   '東京都庁': 'Tokyo Metropolitan Gov. Building', '新宿パークタワー': 'Shinjuku Park Tower', '新宿NSビル': 'Shinjuku NS Building',
   '渋谷スクランブルスクエア': 'Shibuya Scramble Square', '渋谷ヒカリエ': 'Shibuya Hikarie', 'セルリアンタワー': 'Cerulean Tower', '渋谷ストリーム': 'Shibuya Stream', '渋谷マークシティ': 'Shibuya Mark City', 'マークシティ': 'Shibuya Mark City',
@@ -117,7 +117,7 @@ const STATIC_EN = {
   todLabel: 'Time', day: 'Day', dusk: 'Dusk', night: 'Night', langLabel: 'Language',
   missionsH: 'Delivery missions', freeH: 'Free roam',
   howBtn: 'How to play', dexBtn: 'Building collection',
-  credit: 'Building shapes and heights: MLIT Project PLATEAU (Tokyo 23 wards, 2020) / Expressway lines: © OpenStreetMap contributors / Minimap: GSI tiles (pale map). City data built from <a href="https://github.com/techgymjp/shutoko" target="_blank" rel="noopener">Shutoko GP</a> course data',
+  credit: 'Building shapes and heights: MLIT Project PLATEAU (Tokyo 23 wards, 2020; partly via plateau-tokyo23ku-building-mvt-2020 by indigo-lab) / Expressway lines: © OpenStreetMap contributors / Water and minimap: GSI vector tiles and tiles (pale map). City data built from <a href="https://github.com/techgymjp/shutoko" target="_blank" rel="noopener">Shutoko GP</a> course data',
   howH: 'How to play',
   keys: `<tr><th>View</th><td>Mouse (click the screen to lock)</td><td>Drag the right side</td></tr>
       <tr><th>Rope</th><td>Space (or left click) to grab / again to let go</td><td>GRAB button (again to let go)</td></tr>
@@ -135,7 +135,7 @@ const STATIC_EN = {
       <li>Keep holding W A S D (stick) to speed up</li>
       <li>Land on the roof of a named building to add it to your collection</li>`,
   back: 'Back', dexH: 'Building collection', pauseH: 'Paused', resume: 'Resume', retryBtn: '<b>Restart</b>', quitBtn: '<b>Title</b>',
-  resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 33,000 PLATEAU buildings',
+  resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 36,000 PLATEAU buildings',
   tJump: 'JUMP',
 };
 export function applyStatic() {

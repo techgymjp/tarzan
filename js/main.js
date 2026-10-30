@@ -8,8 +8,9 @@ import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
+import { WATER } from './water-data.js';
 import { LANG, setLang, t, tr, nm, applyStatic } from './i18n.js';
-import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan, addImperialPalace, addTogu } from './landmarks.js';
+import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan, addImperialPalace, addTogu, addPalaceGates } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
 applyStatic();
@@ -106,6 +107,7 @@ const dome = addTokyoDome(scene, city);
 const budokan = addBudokan(scene, city);
 const palace = addImperialPalace(scene, city);
 const togu = addTogu(scene, city);
+const gates = addPalaceGates(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
 const sfx = new Sfx();
@@ -154,7 +156,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]]]) {
   const sp = labelSprite(nm(name));
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -205,6 +207,28 @@ const gsx = GW / (GB.x1 - GB.x0), gsz = GH / (GB.z1 - GB.z0);
     g.closePath();
     g.fill(); g.stroke();
   }
+  // 皇居前広場: 砂利の広場を、砂利道で区切った芝生の区画に
+  const [PX0, PZ0] = ll(35.6832, 139.7556), [PX1, PZ1] = ll(35.6784, 139.7604);
+  g.fillStyle = '#d3ccba';
+  g.fillRect((PX0 - GB.x0) * gsx, (PZ0 - GB.z0) * gsz, (PX1 - PX0) * gsx, (PZ1 - PZ0) * gsz);
+  g.fillStyle = '#5f7a4c';
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) {
+    const cw = (PX1 - PX0) / 3, ch = (PZ1 - PZ0) / 4;
+    g.fillRect((PX0 + i * cw + 14 - GB.x0) * gsx, (PZ0 + j * ch + 14 - GB.z0) * gsz, (cw - 28) * gsx, (ch - 28) * gsz);
+  }
+  // 水面 (皇居のお濠・庭園の池・川・運河)。穴 (中島) は抜く
+  g.fillStyle = '#3d6f80';
+  for (const poly of WATER) {
+    g.beginPath();
+    for (const ring of poly) {
+      for (let i = 0; i < ring.length; i += 2) {
+        const x = (ring[i] / 2 - GB.x0) * gsx, z = (ring[i + 1] / 2 - GB.z0) * gsz;
+        if (i) g.lineTo(x, z); else g.moveTo(x, z);
+      }
+      g.closePath();
+    }
+    g.fill('evenodd');
+  }
   // 道路っぽい暗い線
   g.strokeStyle = '#55565a';
   g.lineWidth = 14 * gsx;
@@ -214,6 +238,30 @@ const gsx = GW / (GB.x1 - GB.x0), gsz = GH / (GB.z1 - GB.z0);
     g.lineTo((s.x2 - GB.x0) * gsx, (s.z2 - GB.z0) * gsz);
     g.stroke();
   }
+}
+// 水面のメッシュ (地面のテクスチャより細かく、光る)
+{
+  const pos = [];
+  for (const poly of WATER) {
+    const toV = (ring) => { const v = []; for (let i = 0; i < ring.length; i += 2) v.push(new THREE.Vector2(ring[i] / 2, ring[i + 1] / 2)); return v; };
+    const outer = toV(poly[0]);
+    const holes = poly.slice(1).map(toV);
+    let tris;
+    try { tris = THREE.ShapeUtils.triangulateShape(outer, holes); } catch (e) { continue; }
+    const all = outer.concat(...holes);
+    for (const [a, b, c] of tris) {
+      const A = all[a], B = all[b], C = all[c];
+      // 上向きの面になるように並べる
+      const ny = (B.y - A.y) * (C.x - A.x) - (B.x - A.x) * (C.y - A.y);
+      const tri = ny >= 0 ? [A, B, C] : [A, C, B];
+      for (const p of tri) pos.push(p.x, 0.07, p.y);
+    }
+  }
+  const wg = new THREE.BufferGeometry();
+  wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  wg.computeVertexNormals();
+  const water = new THREE.Mesh(wg, new THREE.MeshPhongMaterial({ color: 0x3e6f84, specular: 0x8899aa, shininess: 60 }));
+  scene.add(water);
 }
 const groundTex = new THREE.CanvasTexture(groundCanvas);
 groundTex.colorSpace = THREE.SRGBColorSpace;
@@ -240,12 +288,27 @@ scene.add(outer);
     const i = (pz * GW + px) * 4;
     if (img[i + 1] > img[i] + 12 && city.floorAt(x, z, 1e9).y === 0) pts.push([x, z, rnd()]); // 建物 (宮殿など) の上には植えない
   }
+  // 皇居前広場の芝生には黒松をたくさん
+  const [QX0, QZ0] = ll(35.6832, 139.7556), [QX1, QZ1] = ll(35.6784, 139.7604);
+  const inPlaza = (x, z) => x > QX0 && x < QX1 && z > QZ0 && z < QZ1;
+  for (let k = 0; k < 1500; k++) {
+    const x = QX0 + rnd() * (QX1 - QX0), z = QZ0 + rnd() * (QZ1 - QZ0);
+    const i = (Math.floor((z - GB.z0) * gsz) * GW + Math.floor((x - GB.x0) * gsx)) * 4;
+    if (img[i + 1] > img[i] + 12) pts.push([x, z, rnd()]);
+  }
   const crown = new THREE.IcosahedronGeometry(1, 0);
   crown.translate(0, 1.6, 0);
   const im = new THREE.InstancedMesh(crown, new THREE.MeshLambertMaterial({ color: 0xffffff }), pts.length);
   const m4 = new THREE.Matrix4(), col = new THREE.Color();
   pts.forEach(([x, z, r], i) => {
     const sc = 4 + r * 5;
+    if (inPlaza(x, z)) {
+      // 黒松: 平たく横に広がった濃い緑
+      m4.makeScale(sc * 0.9, sc * 0.55, sc * 0.9).setPosition(x, 1.5, z);
+      im.setMatrixAt(i, m4);
+      im.setColorAt(i, col.setHSL(0.33, 0.35, 0.16 + r * 0.05));
+      return;
+    }
     m4.makeScale(sc, sc * 1.1, sc).setPosition(x, 0, z);
     im.setMatrixAt(i, m4);
     if (r < 0.12) col.setHex(0xe0b52a); else if (r < 0.18) col.setHex(0xc4512c); else col.setHSL(0.27 + r * 0.06, 0.45, 0.22 + r * 0.1);
