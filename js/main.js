@@ -1161,7 +1161,7 @@ function update(dt) {
         flash(0.15);
         if (game.ringIdx >= rings.length) { finishMission(); return; }
         floater(`${cur.label} 通過！`, false);
-        if (game.ringIdx % 2 === 0 && oni.addOne(player)) floater(`鬼が増えた！（${oni.list.length} 匹）`, false);
+        if (oni.addOne(player)) floater(`鬼が増えた！（${oni.list.length} 匹）`, false);
       }
     }
   }
