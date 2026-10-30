@@ -1,6 +1,7 @@
 // 街: PLATEAU のビルの描画・当たり判定・ロープを掛ける所の探索 (レイキャスト)
 import * as THREE from '../vendor/three.module.min.js';
 import { CITY } from './city-data.js';
+import { HIGHWAYS } from './road-data.js';
 
 export const KX = 111320 * Math.cos(CITY.origin[0] * Math.PI / 180);
 export const KZ = 110574;
@@ -36,7 +37,76 @@ export class City {
     this.parse();
     this.roadSegs = [];
     this.roadGrid = new Map();
+    this.addHighways();
     this.parseRoads();
+  }
+
+  // 首都高グランプリのコースデータにない高架の高速道路を、国土地理院の道路データから足す
+  // (今ある道路から 30m 以上離れた所だけ。高さは高架の段で決め、端はつながる道路の高さ、なければ地面へ下ろす)
+  addHighways() {
+    const segs = [], G = 64, grid = new Map();
+    // 足した道路も入れていく (上り・下りの2本が重ならないように)
+    const addSegs = (r) => {
+      for (let i = 0; i + 1 < r.x.length; i++) {
+        const sg = [r.x[i], r.z[i], r.x[i + 1], r.z[i + 1], r.h[i], r.h[i + 1]];
+        segs.push(sg);
+        for (let gx = Math.floor(Math.min(sg[0], sg[2]) / G) - 1; gx <= Math.floor(Math.max(sg[0], sg[2]) / G) + 1; gx++)
+          for (let gz = Math.floor(Math.min(sg[1], sg[3]) / G) - 1; gz <= Math.floor(Math.max(sg[1], sg[3]) / G) + 1; gz++) {
+            const k = gx + ',' + gz;
+            if (!grid.has(k)) grid.set(k, []);
+            grid.get(k).push(segs.length - 1);
+          }
+      }
+    };
+    for (const r of CITY.roads) addSegs(r);
+    // 一番近い既存の道路までの距離と、その高さ
+    const near = (x, z) => {
+      let best = Infinity, h = 0;
+      for (const i of grid.get(Math.floor(x / G) + ',' + Math.floor(z / G)) || []) {
+        const [x1, z1, x2, z2, h1, h2] = segs[i];
+        const ex = x2 - x1, ez = z2 - z1, L2 = ex * ex + ez * ez || 1;
+        const t = Math.max(0, Math.min(1, ((x - x1) * ex + (z - z1) * ez) / L2));
+        const d = Math.hypot(x - x1 - ex * t, z - z1 - ez * t);
+        if (d < best) { best = d; h = h1 + (h2 - h1) * t; }
+      }
+      return [best, h];
+    };
+    // レインボーブリッジは手作り
+    const [rbx, rbz] = ll(35.63435, 139.76825);
+    for (const line of HIGHWAYS) {
+      const H = 10 + 6 * (line[0] - 1);
+      let run = [];
+      const flush = () => {
+        if (run.length >= 2) {
+          let L = 0;
+          for (let i = 1; i < run.length; i++) L += Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]);
+          if (L > 60) {
+            const h = run.map(() => H);
+            // 端: 既存の道路の近くならその高さに合わせ、そうでなければ 80m かけて地面へ
+            for (const [end, dir] of [[0, 1], [run.length - 1, -1]]) {
+              const [d, hh] = near(run[end][0], run[end][1]);
+              if (d < 45) { h[end] = Math.max(3, hh); continue; }
+              let acc = 0;
+              for (let i = end; i >= 0 && i < run.length; i += dir) {
+                if (i !== end) acc += Math.hypot(run[i][0] - run[i - dir][0], run[i][1] - run[i - dir][1]);
+                if (acc > 80) break;
+                h[i] = Math.min(h[i], 0.5 + (H - 0.5) * acc / 80);
+              }
+            }
+            const nr = { x: run.map((p) => p[0]), z: run.map((p) => p[1]), h, t: run.map(() => 0) };
+            CITY.roads.push(nr);
+            addSegs(nr);
+          }
+        }
+        run = [];
+      };
+      for (let i = 1; i < line.length; i += 2) {
+        const x = line[i] / 2, z = line[i + 1] / 2;
+        const far = near(x, z)[0] > 30 && Math.hypot(x - rbx, z - rbz) > 900;
+        if (far) run.push([x, z]); else flush();
+      }
+      flush();
+    }
   }
 
   parse() {

@@ -1,12 +1,13 @@
 // ターザン大東京: 進行・入力・カメラ・照準・ミッション・得点・図鑑・HUD
 import * as THREE from '../vendor/three.module.min.js';
 import { City, ll } from './city.js';
+import { ROADS } from './road-data.js';
 import { Player, P } from './player.js';
 import { Sfx, Bgm } from './audio.js';
 import { MISSIONS, AREAS, FAMOUS, ONI_BASE_DENSITY, ONI_STEP } from './missions.js';
 import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
-import { addSensoji, addAsahi, addUeno, addOchanomizu, addTokyoStation, addAkasaka, addRailways, addAkibaSigns, addNewOtani, addShibuyaRoppongi, addShinjuku, addYotsuyaKudan, addIkebukuroShinagawa, addUenoAsakusa } from './landmarks2.js';
+import { addSensoji, addAsahi, addUeno, addOchanomizu, addTokyoStation, addAkasaka, addRailways, addAkibaSigns, addNewOtani, addShibuyaRoppongi, addShinjuku, addYotsuyaKudan, addIkebukuroShinagawa, addUenoAsakusa, addOdaiba } from './landmarks2.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
 import { WATER } from './water-data.js';
@@ -126,8 +127,9 @@ const sj = addShinjuku(scene, city);
 const yk = addYotsuyaKudan(scene, city);
 const ik = addIkebukuroShinagawa(scene, city);
 const ua = addUenoAsakusa(scene, city);
+const od = addOdaiba(scene, city);
 const skytreeMat = addSkytree(scene);
-addFuji(scene);
+const fuji = addFuji(scene);
 const distant = addDistant(scene);
 const sfx = new Sfx();
 const bgm = new Bgm(sfx);
@@ -175,7 +177,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]], ['浅草寺 本堂', sensoji.pos[0], 40, sensoji.pos[1]], ['浅草寺 五重塔', sensoji.pagoda[0], 62, sensoji.pagoda[1]], ['雷門', sensoji.kaminari[0], 20, sensoji.kaminari[1]], ['アサヒの金の炎', asahi.pos[0], 52, asahi.pos[1]], ['アサヒビールタワー', asahi.tower[0], asahi.tower[2] + 16, asahi.tower[1]], ['西郷隆盛像', ueno.saigo[0], 12, ueno.saigo[1]], ['不忍池 弁天堂', ueno.benten[0], 22, ueno.benten[1]], ['上野動物園', ...ll(35.71640, 139.77130).flatMap((v, i) => (i ? [v] : [v, 45]))], ['ニコライ堂', ocha.nikolai[0], 48, ocha.nikolai[1]], ['神田明神', ocha.kanda[0], 28, ocha.kanda[1]], ['聖橋', ocha.hijiri[0], 26, ocha.hijiri[1]], ['将門塚', ocha.masakado[0], 8, ocha.masakado[1]], ['東京駅 丸の内駅舎', tstation.pos[0], 48, tstation.pos[1]], ['日枝神社', akasaka.hie[0], 26, akasaka.hie[1]], ['豊川稲荷', akasaka.toyokawa[0], 22, akasaka.toyokawa[1]], ['秋葉原駅', ...ll(35.69840, 139.77310).flatMap((v, i) => (i ? [v] : [v, 50]))], ['御茶ノ水駅', ...ll(35.69950, 139.76470).flatMap((v, i) => (i ? [v] : [v, 30]))], ['マーチエキュート神田万世橋', rails.manseibashi[0], 18, rails.manseibashi[1]], ['秋葉原 電気街', akiba.pos[0], 72, akiba.pos[1]], ['ホテルニューオータニ ザ・メイン', otani.pos[0], 88, otani.pos[1]], ['SHIBUYA109', sr.s109[0], 66, sr.s109[1]], ['スクランブル交差点', sr.scramble[0], 14, sr.scramble[1]], ['ハチ公像', sr.hachiko[0], 6, sr.hachiko[1]], ['国立代々木競技場', sr.yoyogi[0], 52, sr.yoyogi[1]], ['国立新美術館', sr.nact[0], 34, sr.nact[1]], ['麻布台ヒルズ 森JPタワー', sr.azabudai[0], 345, sr.azabudai[1]], ['東急歌舞伎町タワー', sj.kabukichoTower[0], 240, sj.kabukichoTower[1]], ['新宿東宝ビル', sj.toho[0], 150, sj.toho[1]], ['歌舞伎町一番街', sj.ichibangai[0], 16, sj.ichibangai[1]], ['ゴールデン街', sj.goldenGai[0], 14, sj.goldenGai[1]], ['花園神社', sj.hanazono[0], 22, sj.hanazono[1]], ['思い出横丁', sj.omoide[0], 14, sj.omoide[1]], ['NTTドコモ代々木ビル', sj.docomo[0], 252, sj.docomo[1]], ['須賀神社', yk.suga[0], 20, yk.suga[1]], ['防衛省', yk.mod[0], yk.mod[2] + 100, yk.mod[1]], ['靖国神社', yk.yasukuni[0], 30, yk.yasukuni[1]], ['靖国神社 大鳥居', yk.yasukuniTorii[0], 36, yk.yasukuniTorii[1]], ['護国寺', ik.gokokuji[0], 34, ik.gokokuji[1]], ['国立西洋美術館', ua.nmwa[0], 24, ua.nmwa[1]], ['東京文化会館', ua.bunka[0], 28, ua.bunka[1]], ['国立科学博物館', ua.kahaku[0], 34, ua.kahaku[1]], ['SL（D51）', ua.sl[0], 10, ua.sl[1]], ['シロナガスクジラ', ua.whale[0], 14, ua.whale[1]], ['上野東照宮', ua.toshogu[0], 18, ua.toshogu[1]], ['清水観音堂', ua.kiyomizu[0], 18, ua.kiyomizu[1]], ['上野の森美術館', ua.uenonomori[0], 20, ua.uenonomori[1]], ['東京国立博物館', ua.tnm[0], 36, ua.tnm[1]], ['仲見世通り', ua.nakamise[0], 12, ua.nakamise[1]], ['浅草花やしき', ua.hanayashiki[0], 54, ua.hanayashiki[1]], ['浅草文化観光センター', ua.atic[0], 50, ua.atic[1]], ['吾妻橋', ua.azumabashi[0], 10, ua.azumabashi[1]], ['御徒町駅', rails.stations['御徒町駅'][0], 28, rails.stations['御徒町駅'][1]], ['アメ横', rails.stations['アメ横'][0], 14, rails.stations['アメ横'][1]], ['雑司が谷 鬼子母神', ik.kishimojin[0], 18, ik.kishimojin[1]], ['泉岳寺', ik.sengakuji[0], 24, ik.sengakuji[1]], ['高輪ゲートウェイ駅', ik.takanawa[0], 40, ik.takanawa[1]], ['高田馬場駅', rails.stations['高田馬場駅'][0], 22, rails.stations['高田馬場駅'][1]], ['目白駅', rails.stations['目白駅'][0], 22, rails.stations['目白駅'][1]], ['池袋駅', rails.stations['池袋駅'][0], 22, rails.stations['池袋駅'][1]], ['大塚駅', rails.stations['大塚駅'][0], 22, rails.stations['大塚駅'][1]], ['田町駅', rails.stations['田町駅'][0], 22, rails.stations['田町駅'][1]], ['品川駅', rails.stations['品川駅'][0], 22, rails.stations['品川駅'][1]], ['水道橋駅', rails.stations['水道橋駅'][0], 22, rails.stations['水道橋駅'][1]], ['飯田橋駅', rails.stations['飯田橋駅'][0], 22, rails.stations['飯田橋駅'][1]], ['市ケ谷駅', rails.stations['市ケ谷駅'][0], 22, rails.stations['市ケ谷駅'][1]], ['四ツ谷駅', rails.stations['四ツ谷駅'][0], 22, rails.stations['四ツ谷駅'][1]], ['信濃町駅', rails.stations['信濃町駅'][0], 22, rails.stations['信濃町駅'][1]], ['千駄ケ谷駅', rails.stations['千駄ケ谷駅'][0], 22, rails.stations['千駄ケ谷駅'][1]], ['代々木駅', rails.stations['代々木駅'][0], 22, rails.stations['代々木駅'][1]], ['新宿駅', rails.stations['新宿駅'][0], 22, rails.stations['新宿駅'][1]], ['浅草橋駅', rails.stations['浅草橋駅'][0], 22, rails.stations['浅草橋駅'][1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]], ['皇居（宮殿）', palace.pos[0], 40, palace.pos[1]], ['江戸城 天守台', palace.tenshu[0], 30, palace.tenshu[1]], ['東宮御所', togu.pos[0], 36, togu.pos[1]], ['桜田門', gates.sakurada[0], 30, gates.sakurada[1]], ['半蔵門', gates.hanzo[0], 22, gates.hanzo[1]], ['浅草寺 本堂', sensoji.pos[0], 40, sensoji.pos[1]], ['浅草寺 五重塔', sensoji.pagoda[0], 62, sensoji.pagoda[1]], ['雷門', sensoji.kaminari[0], 20, sensoji.kaminari[1]], ['アサヒの金の炎', asahi.pos[0], 52, asahi.pos[1]], ['アサヒビールタワー', asahi.tower[0], asahi.tower[2] + 16, asahi.tower[1]], ['西郷隆盛像', ueno.saigo[0], 12, ueno.saigo[1]], ['不忍池 弁天堂', ueno.benten[0], 22, ueno.benten[1]], ['上野動物園', ...ll(35.71640, 139.77130).flatMap((v, i) => (i ? [v] : [v, 45]))], ['ニコライ堂', ocha.nikolai[0], 48, ocha.nikolai[1]], ['神田明神', ocha.kanda[0], 28, ocha.kanda[1]], ['聖橋', ocha.hijiri[0], 26, ocha.hijiri[1]], ['将門塚', ocha.masakado[0], 8, ocha.masakado[1]], ['東京駅 丸の内駅舎', tstation.pos[0], 48, tstation.pos[1]], ['日枝神社', akasaka.hie[0], 26, akasaka.hie[1]], ['豊川稲荷', akasaka.toyokawa[0], 22, akasaka.toyokawa[1]], ['秋葉原駅', ...ll(35.69840, 139.77310).flatMap((v, i) => (i ? [v] : [v, 50]))], ['御茶ノ水駅', ...ll(35.69950, 139.76470).flatMap((v, i) => (i ? [v] : [v, 30]))], ['マーチエキュート神田万世橋', rails.manseibashi[0], 18, rails.manseibashi[1]], ['秋葉原 電気街', akiba.pos[0], 72, akiba.pos[1]], ['ホテルニューオータニ ザ・メイン', otani.pos[0], 88, otani.pos[1]], ['SHIBUYA109', sr.s109[0], 66, sr.s109[1]], ['スクランブル交差点', sr.scramble[0], 14, sr.scramble[1]], ['ハチ公像', sr.hachiko[0], 6, sr.hachiko[1]], ['国立代々木競技場', sr.yoyogi[0], 52, sr.yoyogi[1]], ['国立新美術館', sr.nact[0], 34, sr.nact[1]], ['麻布台ヒルズ 森JPタワー', sr.azabudai[0], 345, sr.azabudai[1]], ['東急歌舞伎町タワー', sj.kabukichoTower[0], 240, sj.kabukichoTower[1]], ['新宿東宝ビル', sj.toho[0], 150, sj.toho[1]], ['歌舞伎町一番街', sj.ichibangai[0], 16, sj.ichibangai[1]], ['ゴールデン街', sj.goldenGai[0], 14, sj.goldenGai[1]], ['花園神社', sj.hanazono[0], 22, sj.hanazono[1]], ['思い出横丁', sj.omoide[0], 14, sj.omoide[1]], ['NTTドコモ代々木ビル', sj.docomo[0], 252, sj.docomo[1]], ['須賀神社', yk.suga[0], 20, yk.suga[1]], ['防衛省', yk.mod[0], yk.mod[2] + 100, yk.mod[1]], ['靖国神社', yk.yasukuni[0], 30, yk.yasukuni[1]], ['靖国神社 大鳥居', yk.yasukuniTorii[0], 36, yk.yasukuniTorii[1]], ['護国寺', ik.gokokuji[0], 34, ik.gokokuji[1]], ['レインボーブリッジ', od.rainbow[0], 140, od.rainbow[1]], ['フジテレビ本社ビル', od.fujitv[0], 136, od.fujitv[1]], ['自由の女神像', od.liberty[0], 24, od.liberty[1]], ['国立西洋美術館', ua.nmwa[0], 24, ua.nmwa[1]], ['東京文化会館', ua.bunka[0], 28, ua.bunka[1]], ['国立科学博物館', ua.kahaku[0], 34, ua.kahaku[1]], ['SL（D51）', ua.sl[0], 10, ua.sl[1]], ['シロナガスクジラ', ua.whale[0], 14, ua.whale[1]], ['上野東照宮', ua.toshogu[0], 18, ua.toshogu[1]], ['清水観音堂', ua.kiyomizu[0], 18, ua.kiyomizu[1]], ['上野の森美術館', ua.uenonomori[0], 20, ua.uenonomori[1]], ['東京国立博物館', ua.tnm[0], 36, ua.tnm[1]], ['仲見世通り', ua.nakamise[0], 12, ua.nakamise[1]], ['浅草花やしき', ua.hanayashiki[0], 54, ua.hanayashiki[1]], ['浅草文化観光センター', ua.atic[0], 50, ua.atic[1]], ['吾妻橋', ua.azumabashi[0], 10, ua.azumabashi[1]], ['御徒町駅', rails.stations['御徒町駅'][0], 28, rails.stations['御徒町駅'][1]], ['アメ横', rails.stations['アメ横'][0], 14, rails.stations['アメ横'][1]], ['雑司が谷 鬼子母神', ik.kishimojin[0], 18, ik.kishimojin[1]], ['泉岳寺', ik.sengakuji[0], 24, ik.sengakuji[1]], ['高輪ゲートウェイ駅', ik.takanawa[0], 40, ik.takanawa[1]], ['高田馬場駅', rails.stations['高田馬場駅'][0], 22, rails.stations['高田馬場駅'][1]], ['目白駅', rails.stations['目白駅'][0], 22, rails.stations['目白駅'][1]], ['池袋駅', rails.stations['池袋駅'][0], 22, rails.stations['池袋駅'][1]], ['大塚駅', rails.stations['大塚駅'][0], 22, rails.stations['大塚駅'][1]], ['田町駅', rails.stations['田町駅'][0], 22, rails.stations['田町駅'][1]], ['品川駅', rails.stations['品川駅'][0], 22, rails.stations['品川駅'][1]], ['水道橋駅', rails.stations['水道橋駅'][0], 22, rails.stations['水道橋駅'][1]], ['飯田橋駅', rails.stations['飯田橋駅'][0], 22, rails.stations['飯田橋駅'][1]], ['市ケ谷駅', rails.stations['市ケ谷駅'][0], 22, rails.stations['市ケ谷駅'][1]], ['四ツ谷駅', rails.stations['四ツ谷駅'][0], 22, rails.stations['四ツ谷駅'][1]], ['信濃町駅', rails.stations['信濃町駅'][0], 22, rails.stations['信濃町駅'][1]], ['千駄ケ谷駅', rails.stations['千駄ケ谷駅'][0], 22, rails.stations['千駄ケ谷駅'][1]], ['代々木駅', rails.stations['代々木駅'][0], 22, rails.stations['代々木駅'][1]], ['新宿駅', rails.stations['新宿駅'][0], 22, rails.stations['新宿駅'][1]], ['浅草橋駅', rails.stations['浅草橋駅'][0], 22, rails.stations['浅草橋駅'][1]]]) {
   const sp = labelSprite(nm(name));
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -281,7 +283,7 @@ const waterDepth = (x, z) => {
   return 2.5 + 7.5 * Math.exp(-(((x - ox) ** 2 + (z - oz) ** 2) / 600 ** 2)) + 2.5 * Math.exp(-(((x - px) ** 2 + (z - pz) ** 2) / 1300 ** 2));
 };
 {
-  const pos = [], wall = [], mask = [];
+  const pos = [], wall = [], mask = [], edges = [];
   const toV = (ring) => { const v = []; for (let i = 0; i < ring.length; i += 2) v.push(new THREE.Vector2(ring[i] / 2, ring[i + 1] / 2)); return v; };
   for (const poly of WATER) {
     const outer = toV(poly[0]);
@@ -296,14 +298,7 @@ const waterDepth = (x, z) => {
       const tri = ny >= 0 ? [A, B, C] : [A, C, B];
       for (const p of tri) { pos.push(p.x, -waterDepth(p.x, p.y) + 0.4, p.y); mask.push(p.x, 0.02, p.y); }
     }
-    // 岸の壁 (水面から道の高さまで)
-    for (const ring of [outer, ...holes]) {
-      for (let k = 0; k < ring.length; k++) {
-        const A = ring[k], B = ring[(k + 1) % ring.length];
-        const da = -waterDepth(A.x, A.y), db = -waterDepth(B.x, B.y);
-        wall.push(A.x, da, A.y, B.x, db, B.y, B.x, 0.02, B.y, A.x, da, A.y, B.x, 0.02, B.y, A.x, 0.02, A.y);
-      }
-    }
+    edges.push(outer, ...holes);
   }
   const geo = (arr) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.computeVertexNormals(); return g; };
   // 1) 水の形をステンシルに書く (色も深さも書かない)。地面より先に描く
@@ -327,17 +322,8 @@ const waterDepth = (x, z) => {
   })(sc.getContext('2d'), 128, 64);
   const stoneTex = new THREE.CanvasTexture(sc);
   stoneTex.colorSpace = THREE.SRGBColorSpace;
-  const wg = geo(wall);
-  // 壁の UV: 横は長さ、縦は高さ (石の大きさをそろえる)
-  const uv = [];
-  for (let i = 0; i < wall.length; i += 18) {
-    const L = Math.hypot(wall[i + 3] - wall[i], wall[i + 5] - wall[i + 2]) / 4;
-    const ha = wall[i + 1] / 2, hb = wall[i + 4] / 2;
-    uv.push(0, ha, L, hb, L, 0, 0, ha, L, 0, 0, 0);
-  }
-  wg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   stoneTex.wrapS = stoneTex.wrapT = THREE.RepeatWrapping;
-  scene.add(new THREE.Mesh(wg, new THREE.MeshLambertMaterial({ map: stoneTex, side: THREE.DoubleSide })));
+  const stoneMat = new THREE.MeshLambertMaterial({ map: stoneTex, side: THREE.DoubleSide });
   // 3) 地面はステンシルが 1 (水) の所には描かない
   Object.assign(ground.material, { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp });
   // 当たり判定: 水の上は床が水面の高さ (お濠や川に落ちられる)
@@ -368,6 +354,59 @@ const waterDepth = (x, z) => {
     }
     return 0;
   };
+  // 岸の壁 (水面から道の高さまで)。タイルの境目で切れた水どうしの継ぎ目 (両側とも水) には立てない
+  for (const ring of edges) {
+    for (let k = 0; k < ring.length; k++) {
+      const A = ring[k], B = ring[(k + 1) % ring.length];
+      const L = Math.hypot(B.x - A.x, B.y - A.y);
+      if (L < 0.01) continue;
+      const mx = (A.x + B.x) / 2, mz = (A.y + B.y) / 2, nx = (B.y - A.y) / L * 1.5, nz = -(B.x - A.x) / L * 1.5;
+      if (city.waterAt(mx + nx, mz + nz) > 0 && city.waterAt(mx - nx, mz - nz) > 0) continue;
+      const da = -waterDepth(A.x, A.y), db = -waterDepth(B.x, B.y);
+      wall.push(A.x, da, A.y, B.x, db, B.y, B.x, 0.02, B.y, A.x, da, A.y, B.x, 0.02, B.y, A.x, 0.02, A.y);
+    }
+  }
+  const wg = geo(wall);
+  // 壁の UV: 横は長さ、縦は高さ (石の大きさをそろえる)
+  const uv = [];
+  for (let i = 0; i < wall.length; i += 18) {
+    const L = Math.hypot(wall[i + 3] - wall[i], wall[i + 5] - wall[i + 2]) / 4;
+    const ha = wall[i + 1] / 2, hb = wall[i + 4] / 2;
+    uv.push(0, ha, L, hb, L, 0, 0, ha, L, 0, 0, 0);
+  }
+  wg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  scene.add(new THREE.Mesh(wg, stoneMat));
+}
+// 幹線道路 (国道・都道・幅の広い区道): 地面の上にアスファルトの帯と、広い道には白い中央線
+{
+  const pos = [], col = [];
+  const asphalt = [0.36, 0.37, 0.39], white = [0.92, 0.92, 0.9];
+  const strip = (x1, z1, x2, z2, w, y, c) => {
+    const L = Math.hypot(x2 - x1, z2 - z1);
+    if (L < 0.1) return;
+    const ux = (x2 - x1) / L, uz = (z2 - z1) / L;
+    const lx = uz * w / 2, lz = -ux * w / 2;
+    const ex = ux * w * 0.35, ez = uz * w * 0.35; // 曲がり角の隙間を埋める
+    const A = [x1 + lx - ex, y, z1 + lz - ez], B = [x1 - lx - ex, y, z1 - lz - ez], C = [x2 - lx + ex, y, z2 - lz + ez], D = [x2 + lx + ex, y, z2 + lz + ez];
+    pos.push(...A, ...B, ...C, ...A, ...C, ...D);
+    for (let k = 0; k < 6; k++) col.push(...c);
+  };
+  for (const r of ROADS) {
+    const w = r[0];
+    for (let i = 1; i + 3 < r.length; i += 2) {
+      const x1 = r[i] / 2, z1 = r[i + 1] / 2, x2 = r[i + 2] / 2, z2 = r[i + 3] / 2;
+      // 水の上は描かない (高架の道や海底トンネルが水面に線を引かないように。お濠や川の橋は水面のデータに入っていない)
+      if (city.waterAt((x1 + x2) / 2, (z1 + z2) / 2) > 0) continue;
+      strip(x1, z1, x2, z2, w, 0.05, asphalt);
+      if (w >= 16) strip(x1, z1, x2, z2, 0.45, 0.07, white);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const roads = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  scene.add(roads);
 }
 const outer = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshLambertMaterial({ color: 0x5f7a4c }));
 outer.rotation.x = -Math.PI / 2;
@@ -439,6 +478,7 @@ function applyTod(k) {
   scene.fog.color.setHex(t.fog);
   scene.fog.far = Math.min(t.fogFar, DRAW_R);
   distant.setTod(k, t.fog);
+  fuji.setTod(k);
   sun.color.setHex(t.sun);
   sun.intensity = t.sunI;
   sun.position.set(...t.sunDir).multiplyScalar(1000);
@@ -1449,6 +1489,7 @@ function frame() {
   adaptResolution(dt);
   sky.position.copy(camera.position);
   distant.follow(camera);
+  fuji.follow(camera);
   renderer.render(scene, camera);
 }
 

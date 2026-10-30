@@ -159,25 +159,29 @@ export function addSkytree(scene) {
   return m;
 }
 
-// 富士山 (西南西の地平線)
+// 富士山 (西南西の地平線)。遠景の山なみ (カメラから 12.5km の輪) より手前の 12km に、カメラについて動かす (見える方角と高さは同じ)
 export function addFuji(scene) {
   const [X, Z] = ll(35.3606, 138.7274);
   const d = Math.hypot(X, Z);
-  // 本当は約 95km 先。描画の都合で 14km 先に縮めて置く (見える角度は同じ)
-  const k = 14000 / d;
-  const geo = new THREE.ConeGeometry(3776 * k * 3.1, 3776 * k, 48, 1, true);
+  const ux = X / d, uz = Z / d;
+  const R = 12000, k = R / d;
+  const H = 3776 * k * 1.25; // 少しだけ強調
+  const geo = new THREE.ConeGeometry(H * 3.1, H, 48, 1, true);
   const c = geo.attributes.position;
   const cols = [];
   for (let i = 0; i < c.count; i++) {
-    const y = c.getY(i) / (3776 * k) + 0.5;
-    if (y > 0.8) cols.push(0.95, 0.96, 1); else cols.push(0.42, 0.5, 0.66);
+    const y = c.getY(i) / H + 0.5;
+    if (y > 0.78) cols.push(0.97, 0.98, 1); else cols.push(0.42, 0.5, 0.66);
   }
   geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-  const m = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, transparent: true, opacity: 0.8 });
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false });
   const mesh = new THREE.Mesh(geo, m);
-  mesh.position.set(X * k, 3776 * k / 2 - 40, Z * k);
   scene.add(mesh);
-  return m;
+  return {
+    mat: m,
+    follow(cam) { mesh.position.set(cam.position.x + ux * R, H / 2 - 60, cam.position.z + uz * R); },
+    setTod(k2) { m.color.setHex(k2 === 'night' ? 0x303850 : k2 === 'dusk' ? 0xc8a8c0 : 0xffffff); },
+  };
 }
 
 // テックジム東京本校 (千代田区平河町2-7-2 VORT永田町 6F)。首都高グランプリ (techgymjp/shutoko) のモデルを元にしている
@@ -689,7 +693,7 @@ const PEAKS = [
   [35.1600, 139.8350, 330, 4], [35.2500, 139.9500, 379, 5], // 房総 (鋸山・鹿野山)
 ];
 // 東京湾 (おおまかな海岸線)
-export const BAY = [[35.612, 139.760], [35.618, 139.775], [35.624, 139.800], [35.630, 139.840], [35.640, 139.870], [35.660, 139.900], [35.680, 139.960], [35.670, 140.020], [35.630, 140.060], [35.590, 140.100], [35.520, 140.060], [35.450, 139.990], [35.380, 139.920], [35.300, 139.820], [35.200, 139.800], [35.000, 139.780], [35.000, 139.650], [35.250, 139.690], [35.300, 139.660], [35.400, 139.660], [35.450, 139.650], [35.500, 139.700], [35.530, 139.740], [35.555, 139.765], [35.585, 139.765], [35.600, 139.762]];
+export const BAY = [[35.600, 139.760], [35.598, 139.800], [35.610, 139.840], [35.630, 139.870], [35.640, 139.880], [35.660, 139.900], [35.680, 139.960], [35.670, 140.020], [35.630, 140.060], [35.590, 140.100], [35.520, 140.060], [35.450, 139.990], [35.380, 139.920], [35.300, 139.820], [35.200, 139.800], [35.000, 139.780], [35.000, 139.650], [35.250, 139.690], [35.300, 139.660], [35.400, 139.660], [35.450, 139.650], [35.500, 139.700], [35.530, 139.740], [35.555, 139.765], [35.585, 139.765], [35.600, 139.762]];
 export function addDistant(scene) {
   const R = 12500, EARTH = 6371000 / 0.87; // 大気の屈折を少し入れた地球の半径
   const STEP = 0.5, N = 720;

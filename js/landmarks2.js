@@ -962,3 +962,75 @@ export function addUenoAsakusa(scene, city) {
   scene.add(g);
   return { nmwa: [WX, WZ], bunka: [BX, BZ], kahaku: [KX, KZ], sl: [LX, LZ], whale: [QX, QZ], toshogu: [TX, TZ], kiyomizu: [CX, CZ], uenonomori: [MX, MZ], tnm: [HX, HZ], nakamise: [(N0X + N1X) / 2, (N0Z + N1Z) / 2], hanayashiki: [FX, FZ], atic: [AX, AZ], azumabashi: [ecx, ecz] };
 }
+
+// ---------- お台場: レインボーブリッジ・フジテレビ本社ビル・自由の女神像 ----------
+export function addOdaiba(scene, city) {
+  const g = new THREE.Group();
+  const white = M(0xeef0f2), steel = M(0xb8bec6);
+  // レインボーブリッジ: 橋げた (上の段の首都高) は首都高グランプリのコースデータにある。その道に合わせて主塔 (約126m) 2本と吊りケーブル、下の段のトラスを足す
+  const [cx0, cz0] = ll(35.63435, 139.76825);
+  const high = city.roadSegs.filter((sg) => Math.min(sg.h1, sg.h2) > 28 && Math.hypot((sg.x1 + sg.x2) / 2 - cx0, (sg.z1 + sg.z2) / 2 - cz0) < 900);
+  let AX = cx0 - 400, AZ = cz0 - 300, BX = cx0 + 400, BZ = cz0 + 300, best = 0;
+  const ep = high.flatMap((sg) => [[sg.x1, sg.z1, sg.h1], [sg.x2, sg.z2, sg.h2]]);
+  for (const p of ep) for (const q of ep) { const d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d > best) { best = d; [AX, AZ] = p; [BX, BZ] = q; } }
+  const L = Math.hypot(BX - AX, BZ - AZ), rot = Math.atan2(BX - AX, BZ - AZ);
+  const at = (t) => [AX + (BX - AX) * t, AZ + (BZ - AZ) * t];
+  const hAt = (x, z) => { let b = Infinity, h = 40; for (const sg of high) { const d = Math.hypot((sg.x1 + sg.x2) / 2 - x, (sg.z1 + sg.z2) / 2 - z); if (d < b) { b = d; h = (sg.h1 + sg.h2) / 2; } } return h; };
+  const T1 = 0.5 - 285 / L, T2 = 0.5 + 285 / L, TOWER = 126; // 主塔の間は約570m
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const DECK = hAt(...at(0.5));
+  const deckH = (t) => hAt(...at(t));
+  // 下の段 (一般道とゆりかもめ) のトラス: 上の段のすぐ下
+  const truss = mesh(new THREE.BoxGeometry(30, 7, L * 0.9), steel, (AX + BX) / 2, DECK - 6.5, (AZ + BZ) / 2, g);
+  truss.rotation.y = rot;
+  // 主塔
+  for (const t of [T1, T2]) {
+    const [x, z] = at(t);
+    for (const sd of [-1, 1]) {
+      mesh(new THREE.BoxGeometry(4, TOWER, 6), white, x + cs * 16 * sd, TOWER / 2, z - sn * 16 * sd, g);
+      city.addBox(x + cs * 16 * sd, z - sn * 16 * sd, 4, 6, 0, TOWER, 'レインボーブリッジ 主塔');
+    }
+    for (const y of [DECK + 20, TOWER - 25, TOWER - 2]) {
+      const beam = mesh(new THREE.BoxGeometry(36, 3, 4), white, x, y, z, g);
+      beam.rotation.y = rot;
+    }
+  }
+  // 吊りケーブル: 主塔のてっぺんを結ぶ放物線と、両端のアンカーへ
+  const cable = M(0xf4f4f4);
+  for (const sd of [-1, 1]) {
+    const pts = [];
+    for (let i = 0; i <= 60; i++) {
+      const t = i / 60;
+      let y;
+      if (t < T1) y = DECK + 4 + (TOWER - DECK - 4) * (t / T1) ** 1.6;
+      else if (t > T2) y = DECK + 4 + (TOWER - DECK - 4) * ((1 - t) / (1 - T2)) ** 1.6;
+      else { const u = (t - T1) / (T2 - T1) * 2 - 1; y = DECK + 6 + (TOWER - DECK - 6) * u * u; }
+      const [x, z] = at(t);
+      pts.push(new THREE.Vector3(x + cs * 16 * sd, Math.max(y, deckH(t) + 2), z - sn * 16 * sd));
+    }
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.6, 5), cable));
+  }
+  // フジテレビ本社ビル: 2つの棟を格子の通路でつなぎ、球体の展望室 (約123m)
+  const [FX, FZ] = ll(35.62700, 139.77410);
+  const fw = M(0xd8dce0), fb = M(0x6f8fb8);
+  for (const sx of [-1, 1]) {
+    mesh(new THREE.BoxGeometry(28, 123, 40), fw, FX + sx * 30, 61.5, FZ, g);
+    city.addBox(FX + sx * 30, FZ, 28, 40, 0, 123, 'フジテレビ本社ビル').roof = true;
+  }
+  for (let y = 20; y <= 120; y += 20) {
+    mesh(new THREE.BoxGeometry(32, 3, 36), fb, FX, y, FZ, g);
+    city.addBox(FX, FZ, 32, 36, y - 1.5, y + 1.5, 'フジテレビ本社ビル').roof = true;
+  }
+  mesh(new THREE.SphereGeometry(16, 24, 16), M(0xc8ccd2, { emissive: 0x111111 }), FX, 100, FZ, g);
+  // 自由の女神像 (お台場海浜公園)
+  const [SX, SZ] = ll(35.62950, 139.77160);
+  const green = M(0x6fa68f);
+  mesh(new THREE.BoxGeometry(5, 7, 5), M(0xb8b2a6), SX, 3.5, SZ, g);
+  mesh(new THREE.CylinderGeometry(1, 1.8, 8, 10), green, SX, 11, SZ, g);
+  mesh(new THREE.SphereGeometry(0.9, 10, 8), green, SX, 15.6, SZ, g);
+  mesh(new THREE.CylinderGeometry(0.25, 0.25, 4, 6), green, SX + 1.2, 16.5, SZ, g);
+  mesh(new THREE.SphereGeometry(0.5, 8, 6), M(0xffd27a, { emissive: 0x806020 }), SX + 1.2, 18.8, SZ, g);
+  city.addBox(SX, SZ, 5, 5, 0, 7).roof = true;
+  scene.add(g);
+  return { rainbow: at(0.5), fujitv: [FX, FZ], liberty: [SX, SZ] };
+}
