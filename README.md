@@ -100,7 +100,7 @@ python3 tools/build_city.py ../shutoko/js > js/city-data.js
 
 ## 公開
 
-`.github/workflows/pages.yml` で、`main` に push すると GitHub Pages に公開します（リポジトリの Settings → Pages → Source を「GitHub Actions」にしておく）。
+`.github/workflows/pages.yml` で、`main`（または今のデフォルトブランチ `claude/relaxed-hamilton-sujag7`）に push すると GitHub Pages に公開します（リポジトリの Settings → Pages → Source を「GitHub Actions」にしておく）。
 
 ## クレジット
 
