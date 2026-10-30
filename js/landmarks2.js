@@ -398,3 +398,127 @@ export function addNewOtani(scene, city) {
   scene.add(g);
   return { pos: [X, Z] };
 }
+
+// ---------- 渋谷・六本木: SHIBUYA109・スクランブル交差点とハチ公像・国立代々木競技場・国立新美術館・麻布台ヒルズ 森JPタワー ----------
+function ngonPts(X, Z, r, n = 16, a0 = 0) {
+  const pts = [];
+  for (let i = 0; i < n; i++) { const a = a0 + i / n * Math.PI * 2; pts.push(X + Math.cos(a) * r, Z + Math.sin(a) * r); }
+  return pts;
+}
+export function addShibuyaRoppongi(scene, city) {
+  const g = new THREE.Group();
+  // SHIBUYA109: 銀色の円筒の塔 (ロゴは入れず形だけ)
+  const [AX, AZ] = ll(35.65950, 139.69870);
+  const stripe = canvasTex(256, 64, (c, w, h) => {
+    c.fillStyle = '#c9ced4';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#9aa2ab';
+    for (let x = 0; x < w; x += 16) c.fillRect(x, 0, 4, h);
+  });
+  stripe.wrapS = THREE.RepeatWrapping;
+  stripe.repeat.set(6, 1);
+  mesh(new THREE.CylinderGeometry(10, 10, 50, 32), new THREE.MeshLambertMaterial({ map: stripe }), AX, 25, AZ, g);
+  mesh(new THREE.CylinderGeometry(10.6, 10.6, 3, 32), M(0xe8eaed), AX, 51.5, AZ, g);
+  city.addPrism(ngonPts(AX, AZ, 10), 0, 53, 'SHIBUYA109').roof = true;
+  // スクランブル交差点: 横断歩道の白い模様 (5本 + ななめ)
+  const [SX, SZ] = ll(35.65950, 139.70050);
+  const zebra = canvasTex(512, 512, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = 'rgba(70,70,74,0.95)';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#f2f2f2';
+    const band = (x0, y0, x1, y1) => {
+      const len = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / len, uy = (y1 - y0) / len;
+      c.save(); c.translate(x0, y0); c.rotate(Math.atan2(uy, ux));
+      for (let d = 0; d < len; d += 18) c.fillRect(d, -40, 9, 80);
+      c.restore();
+    };
+    band(60, 90, 450, 90); band(60, 420, 450, 420); band(90, 60, 90, 450); band(420, 60, 420, 450);
+    band(110, 110, 400, 400); band(400, 110, 110, 400);
+  });
+  zebra.colorSpace = THREE.SRGBColorSpace;
+  const cross = mesh(new THREE.PlaneGeometry(70, 70), new THREE.MeshLambertMaterial({ map: zebra, transparent: true }), SX, 0.15, SZ, g);
+  cross.rotation.x = -Math.PI / 2;
+  cross.rotation.z = 0.25;
+  // ハチ公像
+  const [HX, HZ] = ll(35.65905, 139.70060);
+  mesh(new THREE.BoxGeometry(2.2, 1.4, 1.4), M(0x9a958b), HX, 0.7, HZ, g);
+  const bronze = M(0x4a4436);
+  mesh(new THREE.BoxGeometry(1.4, 0.7, 0.55), bronze, HX, 1.9, HZ, g);
+  mesh(new THREE.BoxGeometry(0.45, 0.6, 0.45), bronze, HX + 0.6, 2.4, HZ, g);
+  for (const [dx, dz] of [[-0.5, -0.18], [-0.5, 0.18], [0.5, -0.18], [0.5, 0.18]]) mesh(new THREE.BoxGeometry(0.15, 0.5, 0.15), bronze, HX + dx, 1.5, HZ + dz, g);
+  city.addBox(HX, HZ, 2.2, 1.4, 0, 1.4, 'ハチ公像').roof = true;
+  // 国立代々木競技場 第一体育館: 2本の柱のあいだの背骨から吊った、反り返った屋根
+  const [YX, YZ] = ll(35.66760, 139.70010);
+  const roofGeo = new THREE.BufferGeometry();
+  const N = 24, pos = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N * 2 - 1; // 背骨の向き
+    const spine = 40 - 12 * (1 - u * u);
+    const half = 60 * Math.sqrt(1 - u * u * 0.55);
+    for (let j = 0; j <= N; j++) {
+      const v = j / N * 2 - 1; // 横
+      const y = 7 + (spine - 7) * Math.pow(1 - Math.abs(v), 1.7);
+      pos.push(u * 63, y, v * half);
+    }
+  }
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const a = i * (N + 1) + j, b = a + N + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  roofGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  roofGeo.setIndex(idx);
+  roofGeo.computeVertexNormals();
+  const yg = new THREE.Group();
+  yg.position.set(YX, 0, YZ);
+  yg.rotation.y = 0.35;
+  mesh(roofGeo, new THREE.MeshLambertMaterial({ color: 0xbfc5c9, side: THREE.DoubleSide }), 0, 0, 0, yg);
+  mesh(new THREE.CylinderGeometry(62, 64, 7, 32), M(0xb4ada2), 0, 3.5, 0, yg).scale.set(1, 1, 0.9);
+  for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(1.6, 2.2, 42, 8), M(0x8d8a82), s * 63, 21, 0, yg);
+  g.add(yg);
+  city.addPrism(rectPts(YX, YZ, 0.35, 0, 0, 120, 90), 0, 18, '国立代々木競技場').roof = true;
+  city.addPrism(rectPts(YX, YZ, 0.35, 0, 0, 120, 14), 18, 32, '国立代々木競技場');
+  // 国立新美術館: 低い本体と、正面の波打つガラス
+  const [NX, NZ] = ll(35.66530, 139.72630);
+  const rot = -0.45;
+  const ng = new THREE.Group();
+  ng.position.set(NX, 0, NZ);
+  ng.rotation.y = rot;
+  mesh(new THREE.BoxGeometry(160, 21, 50), M(0xb8bcc0), 0, 10.5, 6, ng);
+  const wave = new THREE.BufferGeometry();
+  const wp = [], wi = [];
+  const WN = 60;
+  for (let i = 0; i <= WN; i++) {
+    const x = i / WN * 160 - 80;
+    const zf = -22 - 8 * Math.sin(i / WN * Math.PI * 3);
+    wp.push(x, 0, zf, x, 21, zf - 5 * Math.sin(i / WN * Math.PI * 3 + 1));
+  }
+  for (let i = 0; i < WN; i++) { const a = i * 2; wi.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+  wave.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3));
+  wave.setIndex(wi);
+  wave.computeVertexNormals();
+  mesh(wave, new THREE.MeshPhongMaterial({ color: 0x6fa8c8, specular: 0xaaccff, shininess: 80, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }), 0, 0, 0, ng);
+  g.add(ng);
+  city.addPrism(rectPts(NX, NZ, rot, 0, 6, 160, 50), 0, 21, '国立新美術館').roof = true;
+  // 麻布台ヒルズ 森JPタワー (2023年完成、約325m): 少しすぼまるガラスの塔と白い縦のひれ
+  const [TX, TZ] = ll(35.66042, 139.74049);
+  const glass = M(0x7f9fb8, { emissive: 0x0c1620 });
+  const H = 325;
+  mesh(new THREE.CylinderGeometry(22, 30, H, 8), glass, TX, H / 2, TZ, g).rotation.y = Math.PI / 8;
+  const fins = new THREE.Group();
+  for (let i = 0; i < 16; i++) {
+    const a = i / 16 * Math.PI * 2;
+    const fin = mesh(new THREE.BoxGeometry(0.8, H, 1.6), M(0xf2f2ef), Math.cos(a) * 27, H / 2, Math.sin(a) * 27, fins);
+    fin.rotation.z = Math.atan2(8, H) * (i % 2 ? 1 : -1) * 0;
+  }
+  fins.position.set(TX, 0, TZ);
+  fins.scale.set(0.95, 1, 0.95);
+  g.add(fins);
+  mesh(new THREE.CylinderGeometry(18, 22, 8, 8), M(0xe8e8e4), TX, H + 4, TZ, g).rotation.y = Math.PI / 8;
+  for (let k = 0; k < 5; k++) {
+    const y0 = k * H / 5, r = 30 - 8 * (k + 0.5) / 5;
+    city.addPrism(ngonPts(TX, TZ, r, 8, Math.PI / 8), y0, y0 + H / 5 + (k === 4 ? 8 : 0), '麻布台ヒルズ 森JPタワー').roof = k === 4;
+  }
+  scene.add(g);
+  return { s109: [AX, AZ], scramble: [SX, SZ], hachiko: [HX, HZ], yoyogi: [YX, YZ], nact: [NX, NZ], azabudai: [TX, TZ] };
+}
