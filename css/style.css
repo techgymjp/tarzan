@@ -37,7 +37,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
   background: rgba(0,0,0,0.45); padding: 6px 16px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; white-space: nowrap; }
 #toast.show { opacity: 1; }
 #toast.gold { background: linear-gradient(90deg, #b8860b, #ffcf3f); color: #221600; text-shadow: none; }
-#combo { position: absolute; right: 230px; top: 20px; text-align: right; font-weight: 900; font-size: 34px; color: var(--accent); }
+#combo { position: absolute; right: 270px; top: 20px; text-align: right; font-weight: 900; font-size: 34px; color: var(--accent); }
 #combo small { display: block; font-size: 14px; color: #fff; }
 #floaters { position: absolute; left: 50%; top: 40%; }
 .floater { position: absolute; transform: translateX(-50%); white-space: nowrap; font-weight: 900; font-size: 26px;
@@ -49,8 +49,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
 #stats div { font-size: 34px; line-height: 1.05; font-variant-numeric: tabular-nums; }
 #stats small { font-size: 14px; margin-left: 4px; opacity: 0.8; }
 #stats .score { color: var(--accent); font-size: 26px; }
-#minimap { position: absolute; right: 14px; top: 14px; width: 200px; height: 200px; border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.7); background: rgba(10,20,30,0.5); }
+#minimap { position: absolute; right: 14px; top: 14px; width: 240px; height: 240px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.7); background: rgba(10,20,30,0.5); pointer-events: auto; cursor: zoom-in; }
+#hud #minimap.big { width: min(86vw, 80vh) !important; height: min(86vw, 80vh) !important; top: 50% !important; right: auto !important;
+  left: 50%; transform: translate(-50%, -50%); z-index: 5; cursor: zoom-out; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
 #hint { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 14px; opacity: 0.85;
   background: rgba(0,0,0,0.35); padding: 4px 12px; border-radius: 12px; white-space: nowrap; }
 #groundTip { position: absolute; top: calc(50% + 34px); left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 800;
@@ -73,6 +75,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
 #tPause { position: absolute; top: 14px; right: 158px; width: 44px; height: 44px; font-size: 14px; pointer-events: auto; }
 body.touch #minimap { width: 130px; height: 130px; }
 body.touch #combo { right: 160px; }
+body.touch #minimap { cursor: default; }
 body.touch #stats { bottom: auto; top: 60px; }
 body.touch #stats div { font-size: 24px; }
 body.touch #hint { display: none; }

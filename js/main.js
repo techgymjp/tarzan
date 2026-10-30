@@ -548,6 +548,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyR') respawn();
   if (e.code === 'KeyM') sfx.setMuted(!sfx.muted);
   if (e.code === 'KeyB') setBgm(!bgmOn);
+  if (e.code === 'KeyN') mmEl.classList.toggle('big');
   if (e.code === 'KeyP') pause();
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -706,63 +707,168 @@ function toMap(x, z) {
 }
 const mmEl = $('minimap');
 const mm = mmEl.getContext('2d');
+// 拡大地図: プレイヤーのまわりだけ、細かい地図 (ズーム16) のタイルを読み込んで描く。読み込むまではズーム15の地図を拡大して出す
+const DETAIL_Z = 16;
+const tileCache = new Map();
+function detailTile(x, y) {
+  const key = x + '/' + y;
+  let t = tileCache.get(key);
+  if (!t) {
+    t = new Image();
+    t.crossOrigin = 'anonymous';
+    t.src = `https://cyberjapandata.gsi.go.jp/xyz/pale/${DETAIL_Z}/${x}/${y}.png`;
+    tileCache.set(key, t);
+  }
+  return t.complete && t.naturalWidth ? t : null;
+}
+function toDetail(x, z) {
+  const [lat, lon] = worldToGeo(x, z);
+  return [lonToTileX(lon, DETAIL_Z) * 256, latToTileY(lat, DETAIL_Z) * 256];
+}
+let mmZoom = 0.85;
+// ミニマップをタップ (クリック) すると大きく広げる。もう一度で戻す
+mmEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); mmEl.classList.toggle('big'); });
 function drawMinimap() {
   // キャンバスの解像度によらず 220px 相当の座標で描く
   const k = mmEl.width / 220, W = 220;
   mm.setTransform(1, 0, 0, 1, 0, 0);
   mm.clearRect(0, 0, mmEl.width, mmEl.height);
   mm.setTransform(k, 0, 0, k, 0, 0);
-  const [mex, mey] = toMap(player.p.x, player.p.z);
+  const [mex, mey] = toDetail(player.p.x, player.p.z);
+  // 半径 約250m。速いときは広く (約500m)、大きく広げたときはさらに広く
+  const want = THREE.MathUtils.clamp(0.85 - player.v.length() / 160, 0.42, 0.85) * (mmEl.classList.contains('big') ? 0.55 : 1);
+  mmZoom += (want - mmZoom) * 0.05;
+  const zoom = mmZoom, ms = 1 / zoom;
   mm.save();
   mm.beginPath(); mm.arc(W / 2, W / 2, W / 2, 0, Math.PI * 2); mm.clip();
+  mm.fillStyle = '#e8e4d8';
+  mm.fillRect(0, 0, W, W);
   mm.translate(W / 2, W / 2);
   mm.rotate(cam.yaw); // 進行方向 (カメラの向き) を上に
-  const zoom = isTouch ? 0.9 : 0.7, ms = 0.7 / zoom;
   mm.scale(zoom, zoom);
-  mm.translate(-mex, -mey);
-  mm.drawImage(mapCanvas, 0, 0);
-  const mark = (x, z, r, fill) => {
-    const [px, py] = toMap(x, z);
+  // 下地: ズーム15の地図を2倍に (座標はプレイヤーからの相対)
+  const sc = 2 ** (DETAIL_Z - MAP_Z);
+  mm.drawImage(mapCanvas, mapOrigin.x * sc - mex, mapOrigin.y * sc - mey, mapCanvas.width * sc, mapCanvas.height * sc);
+  // 細かい地図のタイル
+  const R = W / 2 / zoom * 1.42 + 256;
+  for (let ty = Math.floor((mey - R) / 256); ty <= Math.floor((mey + R) / 256); ty++) {
+    for (let tx = Math.floor((mex - R) / 256); tx <= Math.floor((mex + R) / 256); tx++) {
+      const img = detailTile(tx, ty);
+      if (img) mm.drawImage(img, tx * 256 - mex, ty * 256 - mey);
+    }
+  }
+  mm.restore();
+  // 地図を少し薄くして、印を目立たせる
+  mm.save();
+  mm.beginPath(); mm.arc(W / 2, W / 2, W / 2, 0, Math.PI * 2); mm.clip();
+  mm.fillStyle = 'rgba(255,255,255,0.28)';
+  mm.fillRect(0, 0, W, W);
+  // 街の座標 → ミニマップ上の位置 (中心からの相対、回転・拡大ずみ)
+  const cs = Math.cos(cam.yaw), sn = Math.sin(cam.yaw);
+  const toScreen = (x, z) => {
+    const [px, py] = toDetail(x, z);
+    const dx = px - mex, dy = py - mey;
+    return [(dx * cs - dy * sn) * zoom, (dx * sn + dy * cs) * zoom];
+  };
+  const C = W / 2, EDGE = W / 2 - 14;
+  const tt = performance.now() / 1000;
+  const dot = (x, z, r, fill) => {
+    const [sx, sy] = toScreen(x, z);
+    if (Math.hypot(sx, sy) > EDGE + 10) return;
     mm.beginPath();
-    mm.arc(px, py, r * ms, 0, Math.PI * 2);
+    mm.arc(C + sx, C + sy, r, 0, Math.PI * 2);
     mm.fillStyle = fill;
     mm.fill();
-    mm.lineWidth = 3 * ms;
+    mm.lineWidth = 2;
     mm.strokeStyle = '#fff';
     mm.stroke();
   };
+  // 地図の外にあるものは、ふちに置いて向きを矢印で示す
+  const pin = (x, z, draw, arrowColor) => {
+    let [sx, sy] = toScreen(x, z);
+    const d = Math.hypot(sx, sy);
+    const out = d > EDGE;
+    if (out) { sx *= EDGE / d; sy *= EDGE / d; }
+    if (out) {
+      const a = Math.atan2(sy, sx);
+      mm.save();
+      mm.translate(C + sx, C + sy);
+      mm.rotate(a);
+      mm.beginPath();
+      mm.moveTo(15, 0); mm.lineTo(6, -7); mm.lineTo(6, 7); mm.closePath();
+      mm.fillStyle = arrowColor;
+      mm.fill();
+      mm.lineWidth = 1.5;
+      mm.strokeStyle = '#fff';
+      mm.stroke();
+      mm.restore();
+    }
+    draw(C + sx, C + sy, out);
+  };
+  // ほかの目印 (小さく)
+  dot(tower.pos[0], tower.pos[1], 4, '#ff6a00');
   if (game.mode === 'mission') {
-    for (let i = rings.length - 1; i >= game.ringIdx; i--) mark(rings[i].pos.x, rings[i].pos.z, i === game.ringIdx ? 11 : 6, i === game.ringIdx ? '#ff4b5c' : 'rgba(255,140,60,0.8)');
-  } else for (const t of dexTargets) if (!dex.has(t.key)) mark(t.x, t.z, 6, '#e040fb');
-  mark(tower.pos[0], tower.pos[1], 8, '#ff6a00');
-  // 鬼 (追いかけてくる鬼は赤い丸で囲む)
-  mm.font = `${Math.round(26 * ms)}px sans-serif`;
+    for (let i = rings.length - 1; i > game.ringIdx; i--) dot(rings[i].pos.x, rings[i].pos.z, 3.5, 'rgba(255,150,60,0.9)');
+  } else for (const t of dexTargets) if (!dex.has(t.key)) dot(t.x, t.z, 3, '#e040fb');
+  dot(heli.pos.x, heli.pos.z, 3.5, '#ffd400');
+  // 鬼: 赤い丸の上に👹 (追いかけてくる鬼は点滅して、地図の外でもふちに出す)
   mm.textAlign = 'center';
   mm.textBaseline = 'middle';
   for (const o of oni.list) {
-    const [px, py] = toMap(o.pos.x, o.pos.z);
-    mm.save();
-    mm.translate(px, py);
-    mm.rotate(-cam.yaw);
-    if (o.state === 'chase') {
+    const chase = o.state === 'chase';
+    const [sx, sy] = toScreen(o.pos.x, o.pos.z);
+    if (!chase && Math.hypot(sx, sy) > EDGE + 6) continue;
+    pin(o.pos.x, o.pos.z, (X, Y) => {
+      const r = chase ? 11 + Math.sin(tt * 10) * 2 : 9;
       mm.beginPath();
-      mm.arc(0, 0, 18 * ms, 0, Math.PI * 2);
-      mm.fillStyle = 'rgba(255,40,40,0.55)';
+      mm.arc(X, Y, r, 0, Math.PI * 2);
+      mm.fillStyle = chase ? 'rgba(230,20,30,0.9)' : 'rgba(120,20,30,0.75)';
       mm.fill();
-    }
-    mm.fillText('👹', 0, 0);
-    mm.restore();
+      mm.lineWidth = 2;
+      mm.strokeStyle = '#fff';
+      mm.stroke();
+      mm.font = '15px sans-serif';
+      mm.fillText('👹', X, Y + 1);
+    }, '#e8141e');
+  }
+  // 次のチェックポイント: 大きな赤い印 (脈打つ輪つき)
+  if (game.mode === 'mission' && rings[game.ringIdx]) {
+    const r = rings[game.ringIdx];
+    pin(r.pos.x, r.pos.z, (X, Y) => {
+      const k = (tt * 1.2) % 1;
+      mm.beginPath();
+      mm.arc(X, Y, 10 + k * 14, 0, Math.PI * 2);
+      mm.strokeStyle = `rgba(255,60,80,${1 - k})`;
+      mm.lineWidth = 3;
+      mm.stroke();
+      mm.beginPath();
+      mm.arc(X, Y, 10, 0, Math.PI * 2);
+      mm.fillStyle = '#ff2d55';
+      mm.fill();
+      mm.lineWidth = 3;
+      mm.strokeStyle = '#fff';
+      mm.stroke();
+      mm.fillStyle = '#fff';
+      mm.font = 'bold 13px sans-serif';
+      mm.fillText('✦', X, Y + 1);
+    }, '#ff2d55');
   }
   mm.restore();
-  // 自分 (進行方向が上の矢印)
+  // 自分: 大きな青い矢印 (進行方向が上) と脈打つ輪
   mm.save();
-  mm.translate(W / 2, W / 2);
+  mm.translate(C, C);
+  const k2 = (tt * 0.9) % 1;
   mm.beginPath();
-  mm.moveTo(0, -14); mm.lineTo(10, 10); mm.lineTo(0, 5); mm.lineTo(-10, 10);
+  mm.arc(0, 0, 12 + k2 * 12, 0, Math.PI * 2);
+  mm.strokeStyle = `rgba(30,136,255,${0.8 * (1 - k2)})`;
+  mm.lineWidth = 3;
+  mm.stroke();
+  mm.beginPath();
+  mm.moveTo(0, -18); mm.lineTo(13, 13); mm.lineTo(0, 6); mm.lineTo(-13, 13);
   mm.closePath();
   mm.fillStyle = '#1e88ff';
   mm.fill();
-  mm.lineWidth = 2.5;
+  mm.lineWidth = 3;
   mm.strokeStyle = '#fff';
   mm.stroke();
   mm.restore();
@@ -1162,4 +1268,4 @@ addEventListener('resize', () => {
 showScreen('title');
 frame();
 // テスト用 (コンソールから)
-if (location.search.includes('debug')) window.dbg = { game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, oni, fireworks, launchFireworks, tryFire, applyTod };
+if (location.search.includes('debug')) window.dbg = { tileCache, game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, oni, fireworks, launchFireworks, tryFire, applyTod };
