@@ -158,7 +158,8 @@ export class City {
   }
 
   // 壁から押し出す。戻り値: 押し出した向きの配列 [{nx, nz, bd}]
-  collide(p, r, out) {
+  // prevY: 直前の高さ。そのとき屋上より上にいた建物は、上から入ってきたので壁として扱わない (床の判定にまかせる)
+  collide(p, r, out, prevY = -Infinity) {
     out.length = 0;
     const seen = ++this.stamp;
     for (let gx = Math.floor((p.x - r) / CELL); gx <= Math.floor((p.x + r) / CELL); gx++) {
@@ -168,7 +169,7 @@ export class City {
         for (const bd of l) {
           if (bd.mark === seen) continue;
           bd.mark = seen;
-          if (p.y >= bd.h - 0.05 || p.y < bd.y0 - 1.6) continue;
+          if (p.y >= bd.h - 0.05 || p.y < bd.y0 - 1.6 || prevY >= bd.h - 0.05) continue;
           if (p.x < bd.minx - r || p.x > bd.maxx + r || p.z < bd.minz - r || p.z > bd.maxz + r) continue;
           // いちばん近い辺
           const P = bd.pts, n = bd.n;

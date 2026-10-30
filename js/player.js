@@ -151,8 +151,14 @@ export class Player {
         if (this.grounded && ny < -0.2) this.grounded = false;
       }
     }
-    // 壁
-    const cs = this.city.collide(p, P.R, this.contacts);
+    // 上から屋上に着いたとき: 1回の時間刻みで屋上の面より少し下まで入り込むことがあるので、
+    // 壁の判定より先に屋上の上へ戻す (先に壁の判定をすると、建物の中に入ったと見て横へはじき出してしまう)
+    if (p.y < this.prev.y) {
+      const f0 = this.city.floorAt(p.x, p.z, this.prev.y);
+      if (p.y < f0.y && this.prev.y >= f0.y - 0.05) p.y = f0.y;
+    }
+    // 壁 (直前に屋上より上にいた建物は壁として扱わない)
+    const cs = this.city.collide(p, P.R, this.contacts, this.prev.y);
     for (const c of cs) {
       const vn = v.x * c.nx + v.z * c.nz + (c.ny ? v.y * c.ny : 0);
       if (vn < 0) {
