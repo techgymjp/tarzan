@@ -240,6 +240,7 @@ export class Player {
     const handR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), suit2);
     handR.position.y = -0.64;
     this.armR.add(handR);
+    this.handR = handR; // ロープはこの右手から描く
     this.legR = limb(0.16, 0.78, dark, 0.13, 0.78);
     this.legL = limb(0.16, 0.78, dark, -0.13, 0.78);
     scene.add(g);
@@ -255,7 +256,7 @@ export class Player {
     this.scarfMesh.frustumCulled = false;
     scene.add(this.scarfMesh);
     // ロープ
-    const rg = new THREE.CylinderGeometry(0.025, 0.025, 1, 5, 1, true);
+    const rg = new THREE.CylinderGeometry(0.015, 0.015, 1, 5, 1, true);
     rg.translate(0, 0.5, 0);
     this.ropeMesh = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0xfff1c8 }));
     this.ropeMesh.frustumCulled = false;
@@ -333,7 +334,9 @@ export class Player {
     let to = null;
     if (this.rope) to = this.rope.a;
     if (to) {
-      const h = this.hand().clone();
+      // 上げた右手の、いまの位置から (体の中心からだとロープと手の間が空いて見える)
+      this.model.updateMatrixWorld(true);
+      const h = this.handR.getWorldPosition(new THREE.Vector3());
       const d = to.clone().sub(h);
       const L = d.length();
       rm.visible = L > 0.1;

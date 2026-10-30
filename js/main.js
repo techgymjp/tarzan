@@ -629,7 +629,7 @@ function updateOni(dt) {
   $('oni').classList.toggle('danger', chased);
   // 一番近い鬼までの距離 (左下)。追われていたら赤、近ければオレンジ
   const od = $('oniDist');
-  od.classList.toggle('hidden', !Number.isFinite(r.nearest));
+  od.classList.toggle('hidden', !(r.nearest < 1e6));
   if (Number.isFinite(r.nearest)) {
     od.textContent = t('oniDist', { d: Math.round(r.nearest) });
     od.classList.toggle('chase', chased);

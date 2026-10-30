@@ -138,7 +138,7 @@ export class Heli {
     g.add(beacon);
     scene.add(g);
     // 垂らしたロープと、先の持ち手
-    const rg = new THREE.CylinderGeometry(0.035, 0.035, 1, 5, 1, true);
+    const rg = new THREE.CylinderGeometry(0.02, 0.02, 1, 5, 1, true);
     rg.translate(0, 0.5, 0);
     this.dangle = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0xfff1c8 }));
     this.dangle.frustumCulled = false;
