@@ -6,6 +6,7 @@ import { Sfx, Bgm } from './audio.js';
 import { MISSIONS, AREAS, FAMOUS } from './missions.js';
 import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
+import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
 import { addTokyoTower, addDiet, addSkytree, addFuji } from './landmarks.js';
 
@@ -101,6 +102,7 @@ let bgmOn = store.get('bgm', true);
 const player = new Player(scene, city, sfx);
 const fireworks = new Fireworks(scene);
 const heli = new Heli(scene, city);
+const oni = new Oni(scene, city);
 
 // 著名なビルに名前を付けて、屋上の上にラベルを浮かべる
 const labels = [];
@@ -365,6 +367,7 @@ function startGame(m) {
   cam.pitch = -0.1;
   player.facing = cam.yaw;
   heli.reset(player.p, cam.yaw);
+  setupOni(m, sp);
   game.countdown = game.mode === 'mission' ? 3.5 : 0;
   game.state = 'play';
   showScreen(null);
@@ -374,9 +377,85 @@ function startGame(m) {
   $('timer').classList.toggle('hidden', game.mode !== 'mission');
   $('nav').classList.toggle('hidden', game.mode !== 'mission');
   $('dex').classList.toggle('hidden', game.mode !== 'free');
-  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ 左クリック: ロープ ・ Space: ジャンプ ・ R: やり直し ・ Esc: 一時停止';
+  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ 左クリック: ロープをつかむ／離す ・ A D: 曲がる ・ Space: ジャンプ ・ R: やり直し ・ Esc: 一時停止';
   lastArea = '';
   lockPointer();
+}
+
+// 鬼の数と持ち場: ミッションはルートの長さに応じて (ルート沿いに)、フリーは街じゅうに20匹
+function setupOni(m, sp) {
+  const homes = [];
+  let count;
+  if (game.mode === 'mission') {
+    let a = new THREE.Vector3(...sp);
+    for (const r of rings) {
+      const L = a.distanceTo(r.pos);
+      for (let d = 0; d < L; d += 200) homes.push({ x: a.x + (r.pos.x - a.x) * d / L, z: a.z + (r.pos.z - a.z) * d / L });
+      a = r.pos;
+    }
+    count = m.oni || THREE.MathUtils.clamp(Math.round(routeLength(m) / 350) + 2, 4, 16);
+  } else {
+    for (const [, x, z] of AREA_XY) homes.push({ x, z });
+    for (const t of dexTargets) homes.push({ x: t.x, z: t.z });
+    count = 20;
+  }
+  oni.reset(homes, count, { x: sp[0], z: sp[2] }, game.mode === 'mission' ? 520 : 650);
+  game.chasers = 0; game.alarm = false; game.alarmT = 0; game.heartT = 0;
+}
+function updateOni(dt) {
+  const r = oni.update(dt, player, game.countdown <= 0);
+  if (r.spawned) floater(`鬼が ${r.spawned.length} 匹 徘徊している！`, false);
+  if (r.found.length) {
+    sfx.oniLaugh();
+    floater(r.found.length > 1 ? `鬼 ${r.found.length} 匹に見つかった！` : '鬼に見つかった！', true);
+  }
+  game.chasers = oni.list.filter((o) => o.state === 'chase').length;
+  // 追いかけられている間は BGM を止めて警報を鳴らす
+  const chased = game.chasers > 0;
+  if (chased !== game.alarm) {
+    game.alarm = chased;
+    game.alarmT = 0;
+    if (chased) bgm.stop(); else if (bgmOn) bgm.start();
+  }
+  if (chased) {
+    game.alarmT -= dt;
+    if (game.alarmT <= 0) { sfx.alarm(); game.alarmT = 1.5; }
+  }
+  // 追いかけてくる鬼が近いほど速くなる心臓の音
+  game.heartT -= dt;
+  if (r.nearestChase < 150 && game.heartT <= 0) {
+    sfx.heartbeat();
+    game.heartT = 0.35 + (r.nearestChase / 150) * 0.8;
+  }
+  $('danger').style.opacity = Number.isFinite(r.nearestChase) ? Math.max(0, Math.min(1, (180 - r.nearestChase) / 140)) : 0;
+  $('danger').classList.toggle('alarm', chased);
+  $('oni').textContent = `👹 ${oni.list.length}${chased ? `（追跡 ${game.chasers}）` : ''}`;
+  $('oni').classList.toggle('danger', chased);
+  if (r.caught) gameOver();
+}
+// 鬼に捕まったらアウト
+function gameOver() {
+  game.state = 'result';
+  bgm.stop();
+  sfx.heli(null);
+  sfx.caught();
+  cam.shake = 1;
+  flash(0.6);
+  unlockPointer();
+  const m = game.mission;
+  $('resTitle').textContent = '鬼に捕まった！';
+  $('resStars').textContent = '👹';
+  $('resBody').innerHTML = `${m.title}<br>${game.mode === 'mission' ? `輪 ${game.ringIdx} / ${rings.length} ・ ${fmt(game.t)}` : `図鑑 ${dex.size} / ${DEX_ALL.length} 棟`}<br>
+    得点 <b>${Math.round(game.score).toLocaleString()}</b> pt<br>
+    最大コンボ ${game.maxCombo} ／ 着地成功 ${game.landings} 回 ／ 最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h`;
+  setTimeout(() => {
+    if (game.state !== 'result') return;
+    showScreen('result');
+    $('hud').classList.add('hidden');
+    $('touch').classList.add('hidden');
+    $('danger').style.opacity = 0;
+    buildMenu();
+  }, 1200);
 }
 
 function showScreen(id) {
@@ -387,6 +466,8 @@ function finishMission() {
   game.state = 'result';
   bgm.stop();
   sfx.heli(null);
+  oni.clear();
+  $('danger').style.opacity = 0;
   sfx.finish();
   launchFireworks(8, true, 0.35);
   unlockPointer();
@@ -615,6 +696,24 @@ function drawMinimap() {
     for (let i = rings.length - 1; i >= game.ringIdx; i--) mark(rings[i].pos.x, rings[i].pos.z, i === game.ringIdx ? 11 : 6, i === game.ringIdx ? '#ff4b5c' : 'rgba(255,140,60,0.8)');
   } else for (const t of dexTargets) if (!dex.has(t.key)) mark(t.x, t.z, 6, '#e040fb');
   mark(tower.pos[0], tower.pos[1], 8, '#ff6a00');
+  // 鬼 (追いかけてくる鬼は赤い丸で囲む)
+  mm.font = `${Math.round(26 * ms)}px sans-serif`;
+  mm.textAlign = 'center';
+  mm.textBaseline = 'middle';
+  for (const o of oni.list) {
+    const [px, py] = toMap(o.pos.x, o.pos.z);
+    mm.save();
+    mm.translate(px, py);
+    mm.rotate(-cam.yaw);
+    if (o.state === 'chase') {
+      mm.beginPath();
+      mm.arc(0, 0, 18 * ms, 0, Math.PI * 2);
+      mm.fillStyle = 'rgba(255,40,40,0.55)';
+      mm.fill();
+    }
+    mm.fillText('👹', 0, 0);
+    mm.restore();
+  }
   mm.restore();
   // 自分 (進行方向が上の矢印)
   mm.save();
@@ -725,6 +824,7 @@ function collectDex(bd) {
     game.score += 1000;
     sfx.collect();
     toast(`📖 図鑑に登録！ ${bd.name}（${Math.round(bd.h)}m） ${dex.size}/${DEX_ALL.length}`, true);
+    if (game.mode === 'free' && oni.list.length < 40) oni.addOne(player);
     updateDexCount();
   } else toast(`🏢 ${bd.name}（${Math.round(bd.h)}m）`);
 }
@@ -771,6 +871,8 @@ function toTitle() {
   bgm.stop();
   sfx.heli(null);
   fireworks.clear();
+  oni.clear();
+  $('danger').style.opacity = 0;
   clearRings();
   $('hud').classList.add('hidden');
   $('touch').classList.add('hidden');
@@ -881,6 +983,8 @@ function update(dt) {
   }
   heli.update(dt, player, cam.yaw, !!player.rope, Math.min(1, player.moveHold / 3));
   player.update(dt, input);
+  updateOni(dt);
+  if (game.state !== 'play') return;
   handleEvents(dt);
 
   // 輪
@@ -902,6 +1006,7 @@ function update(dt) {
         flash(0.15);
         if (game.ringIdx >= rings.length) { finishMission(); return; }
         floater(`${cur.label} 通過！`, false);
+        if (game.ringIdx % 2 === 0 && oni.addOne(player)) floater(`鬼が増えた！（${oni.list.length} 匹）`, false);
       }
     }
   }
@@ -1010,4 +1115,4 @@ addEventListener('resize', () => {
 showScreen('title');
 frame();
 // テスト用 (コンソールから)
-if (location.search.includes('debug')) window.dbg = { game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, fireworks, launchFireworks, tryFire, applyTod };
+if (location.search.includes('debug')) window.dbg = { game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, oni, fireworks, launchFireworks, tryFire, applyTod };

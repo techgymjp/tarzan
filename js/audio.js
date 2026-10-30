@@ -154,6 +154,25 @@ export class Sfx {
     whistle(90, 40, 0.8, 0.5, t + 0.9);
     for (let i = 0; i < 14; i++) nz(t + 1.1 + Math.random() * 0.9, 0.05, 0.25 * Math.random() + 0.1, 'highpass', 4000);
   }
+  // 鬼が見つけたときの笑い声
+  oniLaugh() {
+    for (let i = 0; i < 4; i++) {
+      this.tone(150 - i * 8, 0.18, 0.22, 'sawtooth', 0.63, i * 0.22);
+      setTimeout(() => this.burst(0.15, 700, 500, 0.3, 'bandpass', 2), i * 220);
+    }
+    this.tone(70, 1.2, 0.5, 'sine', 0.57);
+  }
+  // 追いかけられている間の警報 (ブブー)
+  alarm() {
+    this.tone(220, 0.3, 0.13, 'square', 1);
+    this.tone(220, 0.3, 0.13, 'square', 1, 0.42);
+  }
+  heartbeat() { this.tone(60, 0.18, 0.6, 'sine', 0.67); this.tone(55, 0.2, 0.45, 'sine', 0.7, 0.16); }
+  caught() {
+    this.burst(1.2, 500, 60, 0.9, 'lowpass');
+    this.tone(160, 0.6, 0.25, 'square', 0.25);
+    [0, 0.14, 0.28, 0.42].forEach((d, i) => this.tone(1500 + (i % 2) * 300, 0.12, 0.08, 'sine', 1, 0.6 + d));
+  }
   finish() { [0, 0.12, 0.24, 0.36, 0.6].forEach((d, i) => this.tone([523, 659, 784, 1046, 1319][i], 0.4, 0.14, 'triangle', 1, d)); }
 }
 

@@ -13,6 +13,10 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
 .hidden { display: none !important; }
 
 #speedlines { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+#danger { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.2s;
+  background: radial-gradient(ellipse at center, rgba(255,0,0,0) 55%, rgba(255,30,30,0.55) 100%); }
+#danger.alarm { animation: alarmBlink 0.75s ease-in-out infinite alternate; }
+@keyframes alarmBlink { from { filter: brightness(0.4); } to { filter: brightness(1.2); } }
 #flash { position: fixed; inset: 0; pointer-events: none; background: #fff; opacity: 0; transition: opacity 0.25s; }
 
 /* HUD */
@@ -20,6 +24,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
 #topbar { position: absolute; top: 12px; left: 16px; display: flex; gap: 18px; font-weight: 800; font-size: 22px; align-items: baseline; }
 #timer { font-variant-numeric: tabular-nums; font-size: 30px; }
 #rings, #dex { color: var(--accent); }
+#oni { font-size: 18px; padding: 2px 10px; border-radius: 12px; }
+#oni.danger { background: #e8272b; color: #fff; animation: oniBlink 0.4s infinite alternate; }
+@keyframes oniBlink { to { opacity: 0.6; } }
 #nav { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); text-align: center; }
 #navArrow { font-size: 36px; color: var(--accent); line-height: 1; display: inline-block; }
 #navText { font-size: 14px; font-weight: 700; }

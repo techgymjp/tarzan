@@ -445,6 +445,8 @@ export class City {
     boxes.forEach(([x, y, z, s, hh, r], i) => {
       m4.makeScale(s * (0.7 + r * 0.6), hh, s).setPosition(x, y, z);
       bm.setMatrixAt(i, m4);
+      // 屋上の設備にも当たる (中に入り込まないように)
+      this.addBox(x, z, s * (0.7 + r * 0.6), s, y - 0.5, y + hh);
       bm.setColorAt(i, col.setRGB(0.62 + r * 0.25, 0.63 + r * 0.25, 0.64 + r * 0.25));
     });
     scene.add(bm);

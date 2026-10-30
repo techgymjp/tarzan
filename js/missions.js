@@ -5,6 +5,7 @@ export const MISSIONS = [
     id: 'kasumigaseki',
     title: '霞が関デビュー',
     sub: 'チュートリアル ・ 霞が関ビル → 虎ノ門 → 赤坂 → 国会議事堂',
+    oni: 3, // 鬼の数 (省略するとルートの長さから決める)
     start: [212, 307],
     rings: [
       [409, 483, '虎ノ門'],
