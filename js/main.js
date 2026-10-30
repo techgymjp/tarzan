@@ -347,7 +347,7 @@ function setupRings(m) {
   for (const [x, z, label] of m.rings) {
     const bd = pickRoof(x, z, label);
     const [px, pz] = bd ? roofPoint(bd) : [x, z];
-    const y = (bd ? bd.h : 0) + 4;
+    const y = (bd ? bd.h : 0) + 2.2; // 屋上に立って手が届く高さ
     const mesh = new THREE.Group();
     const orb = new THREE.Mesh(orbGeo, new THREE.MeshBasicMaterial({ color: 0xfff0b0, fog: false }));
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
@@ -920,10 +920,8 @@ function handleEvents(dt) {
       floater('ナイスリリース！', true);
     } else if (e.type === 'land') {
       if (e.what === 'ground') { endCombo(); game.standBd = null; }
-      // ロープでほかのビルの屋上に着地できたら花火
+      // ロープでほかのビルの屋上に着地できたらボーナス (花火はチェックポイントだけ)
       if (e.what === 'roof' && e.bd && e.bd !== game.standBd && game.ropedSince) {
-        const big = !!e.bd.name || e.bd.h >= 100;
-        launchFireworks(big ? 5 : 3, big, 0.3);
         game.landings++;
         game.score += 500 * mult();
         floater(e.bd.name ? `${e.bd.name} に着地！` : '着地成功！', true);
@@ -1147,15 +1145,19 @@ function update(dt) {
       const far = now ? Math.max(18, camera.position.distanceTo(r.pos) * 0.07) : 9;
       r.mesh.userData.halo.scale.setScalar(far * pulse);
       r.mesh.userData.halo.material.opacity = now ? 1 : 0.5;
-      r.pos.y = r.base + Math.sin(tt * 2 + i) * 0.8;
+      r.pos.y = r.base + Math.sin(tt * 2 + i) * 0.4;
     });
     if (cur) {
-      const c = player.p.clone(); c.y += 1;
-      if (c.distanceTo(cur.pos) < 7) {
+      // 玉にちゃんと触れたら通過 (体の上下2か所で、玉の半径 + 体の太さ以内)
+      const touch = 2.6 * cur.mesh.userData.orb.scale.x + 0.7;
+      const lo = player.p.clone(); lo.y += 0.5;
+      const hi = player.p.clone(); hi.y += 1.6;
+      if (lo.distanceTo(cur.pos) < touch || hi.distanceTo(cur.pos) < touch) {
         cur.done = true;
         game.ringIdx++;
         game.score += 500;
         sfx.ring();
+        launchFireworks(5, true, 0.3); // 花火はチェックポイントを通過したときだけ
         flash(0.15);
         if (game.ringIdx >= rings.length) { finishMission(); return; }
         floater(`${cur.label} 通過！`, false);
