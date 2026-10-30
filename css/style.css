@@ -165,3 +165,10 @@ body.touch #toast { white-space: normal; max-width: calc(100% - 24px); text-alig
   body.touch #toast { bottom: auto; top: 112px; max-width: 46%; }
   body.touch #combo { top: 150px; right: 14px; font-size: 26px; }
 }
+
+/* 結果のシェア */
+.share { display: flex; gap: 8px; margin: 10px 0 4px; }
+.share button { flex: 1; padding: 10px; border-radius: 12px; font-weight: 800; font-size: 15px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; }
+.share #resShare { background: #111; border-color: #555; }
+.share button:hover { border-color: var(--accent); }

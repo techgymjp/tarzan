@@ -11,6 +11,8 @@ import { CITY } from './city-data.js';
 import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
+// 結果のシェアに付ける紹介記事の URL
+const SHARE_URL = 'https://techgym.jp/column/claude-code-game-tarzan/';
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 if (isTouch) document.body.classList.add('touch');
 const store = {
@@ -507,6 +509,9 @@ function gameOver() {
   unlockPointer();
   const m = game.mission;
   $('resTitle').textContent = '鬼に捕まった！';
+  game.shareText = game.mode === 'mission'
+    ? `ターザン大東京「${m.title}」でチェックポイント ${game.ringIdx}/${rings.length} まで行ったけど、鬼に捕まった…👹 得点 ${Math.round(game.score).toLocaleString()}pt #ターザン大東京`
+    : `ターザン大東京で東京のビルを ${dex.size}/${DEX_ALL.length} 棟 図鑑に集めたけど、鬼に捕まった…👹 #ターザン大東京`;
   $('resNext').classList.add('hidden');
   $('resStars').textContent = '👹';
   $('resBody').innerHTML = `${m.title}<br>${game.mode === 'mission' ? `チェックポイント ${game.ringIdx} / ${rings.length} ・ ${fmt(game.t)}` : `図鑑 ${dex.size} / ${DEX_ALL.length} 棟`}<br>
@@ -554,6 +559,7 @@ function finishMission() {
     得点 ${Math.round(game.score).toLocaleString()} pt ／ 最大コンボ ${game.maxCombo}<br>
     最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h ／ ナイスリリース ${game.nice} 回 ／ 着地成功 ${game.landings} 回<br>
     <small>★★★ ${fmt(L / 34)} ／ ★★ ${fmt(L / 24)}</small>`;
+  game.shareText = `ターザン大東京「${m.title}」を ${fmt(t)} で配達完了！ ${'★'.repeat(stars)}${'☆'.repeat(3 - stars)} 得点 ${Math.round(game.score).toLocaleString()}pt #ターザン大東京`;
   // 鍵が開いたお知らせと「次のステージへ」
   const next = MISSIONS[idx + 1];
   let unlockMsg = '';
@@ -1046,6 +1052,25 @@ $('resumeBtn').onclick = () => { game.state = 'play'; bgm.duck(false); showScree
 $('retryBtn').onclick = () => startGame(game.mission);
 $('quitBtn').onclick = () => toTitle();
 $('resRetry').onclick = () => startGame(game.mission);
+// 結果のシェア: スマホは端末の共有メニュー、パソコンは X の投稿画面
+$('resShare').onclick = async () => {
+  if (!game.shareText) return;
+  if (navigator.share && isTouch) {
+    try { await navigator.share({ title: 'ターザン大東京', text: game.shareText, url: SHARE_URL }); } catch (e) { /* キャンセル */ }
+    return;
+  }
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(game.shareText) + '&url=' + encodeURIComponent(SHARE_URL), '_blank', 'noopener');
+};
+$('resCopy').onclick = async () => {
+  if (!game.shareText) return;
+  try {
+    await navigator.clipboard.writeText(game.shareText + ' ' + SHARE_URL);
+    $('resCopy').textContent = 'コピーしました';
+  } catch (e) {
+    $('resCopy').textContent = 'コピーできませんでした';
+  }
+  setTimeout(() => { $('resCopy').textContent = '結果をコピー'; }, 1800);
+};
 $('resQuit').onclick = () => toTitle();
 function toTitle() {
   game.state = 'title';
