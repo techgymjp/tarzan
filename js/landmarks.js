@@ -353,3 +353,67 @@ export function addTechGym(scene, city) {
     setNight(k) { ballMat.emissive.setHex(k === 'night' ? 0x803000 : k === 'dusk' ? 0x4a1c00 : 0x2a1000); },
   };
 }
+
+// 東京ドーム (文京区後楽1-3-61)。PLATEAU では円柱の箱なので、白い膜屋根がふくらんだドームに作り直す
+// 直径 約200m・高さ 約56m。屋根の上に降りられる (段々の柱で当たり判定)
+export function addTokyoDome(scene, city) {
+  const [X, Z] = ll(35.70563, 139.75192);
+  const RW = 100, WALL = 28, TOP = 56;
+  const R = (RW * RW + (TOP - WALL) ** 2) / (2 * (TOP - WALL)); // 屋根の球の半径
+  const YC = TOP - R; // 球の中心の高さ
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  // 膜屋根: 白地にケーブルの線
+  const roofTex = canvasTex(1024, 256, (c, w, h) => {
+    c.fillStyle = '#f4f6f8';
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = 'rgba(150,160,175,0.7)';
+    c.lineWidth = 3;
+    for (let i = 0; i <= 32; i++) { c.beginPath(); c.moveTo(i * w / 32, 0); c.lineTo(i * w / 32, h); c.stroke(); }
+    for (let j = 1; j < 4; j++) { c.beginPath(); c.moveTo(0, j * h / 4); c.lineTo(w, j * h / 4); c.stroke(); }
+  });
+  const roofMat = new THREE.MeshLambertMaterial({ map: roofTex, emissive: 0x000000 });
+  const roof = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 12, 0, Math.PI * 2, 0, Math.asin(RW / R)), roofMat);
+  roof.position.y = YC;
+  g.add(roof);
+  // 外壁 (ガラスと白い柱) と、屋根との境の輪
+  const wallTex = canvasTex(1024, 128, (c, w, h) => {
+    c.fillStyle = '#9fb4c4';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#eef1f4';
+    for (let x = 0; x < w; x += 32) c.fillRect(x, 0, 8, h);
+    c.fillRect(0, 0, w, 14);
+    c.fillRect(0, h * 0.55, w, 10);
+  });
+  wallTex.wrapS = THREE.RepeatWrapping;
+  wallTex.repeat.set(4, 1);
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(RW, RW + 3, WALL, 64, 1, true), new THREE.MeshLambertMaterial({ map: wallTex }));
+  wall.position.y = WALL / 2;
+  g.add(wall);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(RW, 1.6, 8, 64), new THREE.MeshLambertMaterial({ color: 0xdadfe4 }));
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = WALL;
+  g.add(rim);
+  // まわりの広場
+  const plaza = new THREE.Mesh(new THREE.CircleGeometry(RW + 25, 48), new THREE.MeshLambertMaterial({ color: 0xc9c4ba }));
+  plaza.rotation.x = -Math.PI / 2;
+  plaza.position.y = 0.1;
+  g.add(plaza);
+  scene.add(g);
+  // 当たり判定: 外壁の円柱 + 屋根を段々の柱で近似 (屋根の上に降りられる)
+  const ngon = (r) => {
+    const pts = [];
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; pts.push(X + Math.cos(a) * r, Z + Math.sin(a) * r); }
+    return pts;
+  };
+  city.addPrism(ngon(RW + 1), 0, WALL, '東京ドーム').roof = true;
+  for (let y = WALL + 4; y <= TOP - 1; y += 4) {
+    const r = Math.sqrt(R * R - (y - YC) ** 2);
+    city.addPrism(ngon(r), 0, y, '東京ドーム').roof = true;
+  }
+  return {
+    pos: [X, Z],
+    // 夜はナイターで膜屋根がほんのり光る
+    setNight(k) { roofMat.emissive.setHex(k === 'night' ? 0x6a7280 : k === 'dusk' ? 0x2a2c30 : 0x000000); },
+  };
+}

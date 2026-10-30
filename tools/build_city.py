@@ -15,8 +15,8 @@
 import glob, json, math, sys
 
 src = sys.argv[1]
-# 都心: 新宿・渋谷 〜 六本木・霞が関 〜 銀座・汐留・東京タワー
-LAT_MIN, LAT_MAX = 35.645, 35.700
+# 都心: 新宿・渋谷 〜 六本木・霞が関 〜 銀座・汐留・東京タワー、北は水道橋・後楽園 (東京ドーム) まで
+LAT_MIN, LAT_MAX = 35.645, 35.712
 LON_MIN, LON_MAX = 139.690, 139.785
 LAT0, LON0 = 35.6740, 139.7450  # 原点 (霞が関・国会議事堂のあたり)
 KX = 111320 * math.cos(math.radians(LAT0))
@@ -25,6 +25,12 @@ KZ = 110574
 def load(f):
     s = open(f, encoding='utf-8').read()
     return json.loads(s[s.index('{'):s.rindex('}') + 1])
+
+# 手作りのモデルに置き換える所 (緯度, 経度, 半径m) … ここの PLATEAU の建物は除く
+REPLACE = [
+    (35.70563, 139.75192, 105),  # 東京ドーム (PLATEAU では円柱の箱)
+]
+rep_xy = [((lo - LON0) * KX, -(la - LAT0) * KZ, r) for la, lo, r in REPLACE]
 
 seen = {}
 out, names, roads = [], [], []
@@ -54,6 +60,8 @@ for f in sorted(glob.glob(src + '/course-*data.js')):
         clat = sum(c[0] for c in cv) / n
         clon = sum(c[1] for c in cv) / n
         if not (LAT_MIN < clat < LAT_MAX and LON_MIN < clon < LON_MAX):
+            continue
+        if any((sum(c[2] for c in cv) / n - x) ** 2 + (sum(c[3] for c in cv) / n - z) ** 2 < r * r for x, z, r in rep_xy):
             continue
         q = [(round(c[2] * 2), round(c[3] * 2)) for c in cv]
         # 同じ建物が複数のコースに入っている (間引き方が違うことがある) → 重心と高さで見分ける
