@@ -43,7 +43,7 @@ const S = {
   bonk: ['ゴツン！', 'Bonk!'],
   nearMiss: ['ニアミス！', 'Near miss!'],
   building: ['ビル 高さ {h}m', 'Building {h}m'],
-  dexNew: ['📖 図鑑に登録！ {b}（{h}m） {n}/{total}', '📖 New in collection! {b} ({h}m) {n}/{total}'],
+  dexNew: ['📖 {b}（{h}m） {n}/{total}', '📖 {b} ({h}m) {n}/{total}'],
   dexKnown: ['🏢 {b}（{h}m）', '🏢 {b} ({h}m)'],
   combo: ['{n} コンボ！', '{n} combo!'],
   retry: ['やり直し', 'Retry'],
