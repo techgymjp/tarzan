@@ -179,3 +179,177 @@ export function addFuji(scene) {
   scene.add(mesh);
   return m;
 }
+
+// テックジム東京本校 (千代田区平河町2-7-2 VORT永田町 6F)。首都高グランプリ (techgymjp/shutoko) のモデルを元にしている
+// 10階建てのビル・6階のオレンジの帯・屋上の紅白の鉄塔と看板・高さ約520mのアドバルーンと垂れ幕
+const JP = '"Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif';
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+export function addTechGym(scene, city) {
+  const [X, Z] = ll(35.68022, 139.74014);
+  const [FX, FZ] = ll(35.68010, 139.73300); // 正面 (+z) を向ける方向
+  const rot = Math.atan2(FX - X, FZ - Z);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  g.rotation.y = rot;
+  const W = 24, D = 20, H = 36.5;
+  const M = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, ...o });
+  // ビル本体 (窓)
+  const winTex = canvasTex(256, 512, (c, w, h) => {
+    c.fillStyle = '#d8dde2';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#3d4f63';
+    for (let y = 0; y < 10; y++) for (let x = 0; x < 6; x++) c.fillRect(x * 42 + 6, y * 50 + 10, 32, 32);
+  });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), new THREE.MeshLambertMaterial({ map: winTex }));
+  body.position.y = H / 2;
+  g.add(body);
+  const crown = new THREE.Mesh(new THREE.BoxGeometry(W + 1, 1.2, D + 1), M(0x5c646b));
+  crown.position.y = H + 0.6;
+  g.add(crown);
+  // 6階: オレンジに光る窓の帯と「TECH GYM 6F」
+  const band = canvasTex(1024, 128, (c, w, h) => {
+    const gr = c.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, '#ffb347');
+    gr.addColorStop(1, '#ff7a00');
+    c.fillStyle = gr;
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(255,255,255,0.35)';
+    for (let x = 0; x < w; x += 64) c.fillRect(x, 0, 4, h);
+    c.fillStyle = '#0b1a2e';
+    c.font = `900 84px ${JP}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('TECH GYM  6F', w / 2, h / 2 + 4);
+  });
+  const bandMat = new THREE.MeshBasicMaterial({ map: band });
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(W, 3.5), bandMat);
+  front.position.set(0, 20.25, D / 2 + 0.06);
+  g.add(front);
+  for (const sx of [-1, 1]) {
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(D, 3.5), bandMat);
+    side.position.set(sx * (W / 2 + 0.06), 20.25, 0);
+    side.rotation.y = sx * Math.PI / 2;
+    g.add(side);
+  }
+  // 正面の角に縦の看板
+  const vt = canvasTex(160, 640, (c, w, h) => {
+    c.fillStyle = '#ff7a00';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#fff';
+    c.font = `900 96px ${JP}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    ['テ', 'ッ', 'ク', 'ジ', 'ム'].forEach((ch, i) => c.fillText(ch, w / 2, 70 + i * 122));
+  });
+  const v = new THREE.Mesh(new THREE.PlaneGeometry(3, 12), new THREE.MeshBasicMaterial({ map: vt }));
+  v.position.set(W / 2 - 2, 29, D / 2 + 0.08);
+  g.add(v);
+  // 屋上から紅白の鉄塔を立て、まわりの高層ビルの上に看板を掲げる
+  const TOP = 182;
+  const red = M(0xd8341f, { side: THREE.DoubleSide }), white = M(0xf2f2f2, { side: THREE.DoubleSide });
+  const segs = 10;
+  for (let i = 0; i < segs; i++) {
+    const y0 = H + ((TOP - 12 - H) * i) / segs, y1 = H + ((TOP - 12 - H) * (i + 1)) / segs;
+    const r0 = 5 - 3 * (i / segs), r1 = 5 - 3 * ((i + 1) / segs);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, y1 - y0, 4, 1, true), i % 2 ? white : red);
+    m.rotation.y = Math.PI / 4;
+    m.position.y = (y0 + y1) / 2;
+    g.add(m);
+  }
+  const signTex = canvasTex(1024, 320, (c, w, h) => {
+    c.fillStyle = '#0b1a2e';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#ff7a00';
+    c.fillRect(0, 0, w, 16);
+    c.fillRect(0, h - 16, w, 16);
+    c.fillStyle = '#ffffff';
+    c.font = `900 150px ${JP}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('TECH GYM', w / 2, h * 0.42);
+    c.fillStyle = '#ffb347';
+    c.font = `900 56px ${JP}`;
+    c.fillText('テックジム東京本校  永田町4番出口', w / 2, h * 0.8);
+  });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(40, 12.5), new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide }));
+  sign.position.set(0, TOP - 6, 0);
+  g.add(sign);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(41, 13.5, 0.6), M(0x2a2f35));
+  frame.position.set(0, TOP - 6, -0.4);
+  g.add(frame);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.8, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
+  beacon.position.y = TOP + 1;
+  g.add(beacon);
+  // アドバルーン: 遠くからも見えるよう大きく高く上げ、霧で消えないようにする (高さ約520m・直径約140m。ゲームの演出)
+  const balloon = new THREE.Group();
+  const BY = 520, BR = 70;
+  const ballTex = canvasTex(1024, 512, (c, w, h) => {
+    c.fillStyle = '#ff6a00';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, h * 0.38, w, h * 0.24);
+    c.fillStyle = '#0b1a2e';
+    c.font = `900 ${h * 0.17}px ${JP}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    // 球の周りに2回書く (どこから見ても読める)
+    c.fillText('TECH GYM', w * 0.25, h / 2 + 4);
+    c.fillText('TECH GYM', w * 0.75, h / 2 + 4);
+  });
+  const ballMat = new THREE.MeshLambertMaterial({ map: ballTex, emissive: 0x2a1000, fog: false });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(BR, 32, 20), ballMat);
+  ball.position.y = BY;
+  balloon.add(ball);
+  // 垂れ幕 (縦書き)
+  const bannerTex = canvasTex(192, 1024, (c, w, h) => {
+    c.fillStyle = '#ffffff';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#ff6a00';
+    c.fillRect(0, 0, 14, h);
+    c.fillRect(w - 14, 0, 14, h);
+    c.fillStyle = '#0b1a2e';
+    const txt = [...'テックジム東京本校'];
+    const step = (h - 60) / txt.length;
+    c.font = `900 ${Math.min(108, step * 0.9)}px ${JP}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    txt.forEach((ch, i) => c.fillText(ch, w / 2, 30 + step * (i + 0.5)));
+  });
+  const banner = new THREE.Mesh(new THREE.PlaneGeometry(42, 226), new THREE.MeshBasicMaterial({ map: bannerTex, side: THREE.DoubleSide, fog: false }));
+  banner.position.y = BY - BR - 117;
+  balloon.add(banner);
+  // ロープ (屋上の看板の上から)
+  const ropeLen = BY - BR - 230 - (TOP + 2);
+  const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, ropeLen, 4), new THREE.MeshBasicMaterial({ color: 0x555555, fog: false }));
+  rope.position.y = TOP + 2 + ropeLen / 2;
+  g.add(rope);
+  g.add(balloon);
+  scene.add(g);
+
+  // 当たり判定 (ビル・鉄塔・看板・アドバルーン)。ビルの屋上に降りると図鑑に載る
+  const cs = Math.cos(rot), sn = Math.sin(rot);
+  const corner = (lx, lz) => [X + lx * cs + lz * sn, Z - lx * sn + lz * cs];
+  const rect = (w, d) => [...corner(-w / 2, -d / 2), ...corner(w / 2, -d / 2), ...corner(w / 2, d / 2), ...corner(-w / 2, d / 2)];
+  city.addPrism(rect(W, D), 0, H + 1.2, 'テックジム東京本校');
+  city.addPrism(rect(6, 6), H + 1.2, TOP - 12, 'テックジムの鉄塔');
+  city.addPrism(rect(41, 1.2), TOP - 12.75, TOP + 0.75, 'テックジムの看板');
+  city.addBox(X, Z, BR * 1.6, BR * 1.6, BY - BR * 0.8, BY + BR * 0.8, 'テックジムのアドバルーン');
+  return {
+    pos: [X, Z],
+    // 風でゆっくり揺れる
+    update(t) {
+      balloon.rotation.z = Math.sin(t * 0.5) * 0.03;
+      balloon.rotation.x = Math.sin(t * 0.37 + 1) * 0.025;
+      balloon.rotation.y = t * 0.05;
+    },
+    setNight(k) { ballMat.emissive.setHex(k === 'night' ? 0x803000 : k === 'dusk' ? 0x4a1c00 : 0x2a1000); },
+  };
+}

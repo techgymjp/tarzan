@@ -8,7 +8,7 @@ import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
-import { addTokyoTower, addDiet, addSkytree, addFuji } from './landmarks.js';
+import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -94,6 +94,7 @@ city.buildMeshes(scene, mats);
 city.buildRoads(scene);
 const tower = addTokyoTower(scene, city);
 addDiet(scene, city);
+const techgym = addTechGym(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
 const sfx = new Sfx();
@@ -142,7 +143,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]]]) {
   const sp = labelSprite(name);
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -269,6 +270,7 @@ function applyTod(k) {
   tower.mats[0].emissive.setHex(k === 'day' ? 0x000000 : 0xffd59a);
   tower.mats[0].emissiveIntensity = k === 'night' ? 0.8 : 0.3;
   // 夜はタワーがオレンジに光る (ランドマークライト)
+  techgym.setNight(k);
   for (const m of tower.glow) m.emissive.setHex(k === 'night' ? 0xc0480c : k === 'dusk' ? 0x2a0e04 : 0x000000);
   skytreeMat.color.setHex(k === 'night' ? 0x6a86b8 : 0xd8e2ea);
   document.querySelectorAll('#tod button').forEach((b) => b.classList.toggle('on', b.dataset.v === k));
@@ -931,6 +933,7 @@ function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, clock.getDelta());
   fireworks.update(dt);
+  techgym.update(clock.elapsedTime);
   if (game.state === 'play') update(dt);
   else if (game.state === 'title') {
     // タイトルの背景: 都心の上空をゆっくり回る
