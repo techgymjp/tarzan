@@ -109,7 +109,6 @@ export class Sfx {
     o.start(t);
     o.stop(t + dur + 0.05);
   }
-  shoot() { this.burst(0.18, 3500, 900, 0.35, 'bandpass', 2); this.tone(900, 0.12, 0.08, 'triangle', 0.4); }
   attach() { this.tone(160, 0.12, 0.35, 'sine', 0.5); this.burst(0.06, 2000, 400, 0.25, 'lowpass'); }
   miss() { this.tone(300, 0.15, 0.08, 'square', 0.5); }
   release() { this.burst(0.25, 600, 2400, 0.2, 'bandpass', 1.5); }

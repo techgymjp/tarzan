@@ -289,11 +289,9 @@ updateDexCount();
 
 // ---------- ミッション ----------
 const ringGeo = new THREE.TorusGeometry(11, 0.9, 10, 40);
-const beamGeo = new THREE.CylinderGeometry(1.2, 1.2, 600, 8, 1, true);
-beamGeo.translate(0, 300, 0);
 let rings = [];
 function clearRings() {
-  for (const r of rings) { scene.remove(r.mesh); scene.remove(r.beam); }
+  for (const r of rings) scene.remove(r.mesh);
   rings = [];
 }
 function setupRings(m) {
@@ -308,10 +306,8 @@ function setupRings(m) {
     }
     const mesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffc53a, transparent: true, opacity: 0.9, fog: false }));
     mesh.position.set(px, y, pz);
-    const beam = new THREE.Mesh(beamGeo, new THREE.MeshBasicMaterial({ color: 0xffc53a, transparent: true, opacity: 0.18, depthWrite: false, fog: false }));
-    beam.position.set(px, 0, pz);
-    scene.add(mesh); scene.add(beam);
-    rings.push({ mesh, beam, label, pos: mesh.position, done: false });
+    scene.add(mesh);
+    rings.push({ mesh, label, pos: mesh.position, done: false });
     prev = [px, y, pz];
   });
   // 輪の向き: 前の輪から次の輪へ
@@ -995,7 +991,6 @@ function update(dt) {
     const cur = rings[game.ringIdx];
     rings.forEach((r, i) => {
       r.mesh.visible = !r.done && i <= game.ringIdx + 2;
-      r.beam.visible = i === game.ringIdx;
       r.mesh.material.opacity = i === game.ringIdx ? 0.95 : 0.4;
       if (i === game.ringIdx) r.mesh.rotation.z += dt * 0.8;
     });

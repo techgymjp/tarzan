@@ -5,7 +5,6 @@ export const P = {
   G: 30,          // 重力 (本物の約3倍。ビルの大きさで振り子が気持ちよく回る速さ)
   DRAG: 0.0032,   // 空気抵抗 (v^2)
   ROPE_MAX: 150,  // ロープが届く距離
-  ROPE_SPEED: 650,
   PUMP: 11,       // ぶら下がり中のこぎ
   AIR: 9,         // 空中の操作
   RUN: 13,
@@ -25,7 +24,6 @@ export class Player {
     this.grounded = false;
     this.groundWhat = 'ground';
     this.rope = null;        // { a: Vector3, L, bd }
-    this.shot = null;        // 飛んでいるロープ { from, to, t, dist, hit }
     this.stun = 0;
     this.airTime = 0;
     this.events = [];
@@ -40,7 +38,7 @@ export class Player {
   reset(x, y, z, yaw = 0) {
     this.p.set(x, y, z); this.prev.copy(this.p);
     this.v.set(0, 0, 0);
-    this.rope = null; this.shot = null;
+    this.rope = null;
     this.grounded = false;
     this.stun = 0;
     this.facing = yaw;
@@ -49,17 +47,8 @@ export class Player {
 
   hand() { return this.tmpHand.set(this.p.x, this.p.y + P.HAND, this.p.z); }
 
-  // ロープを撃つ (hit = city.raycast の結果)
-  fire(hit) {
-    const from = this.hand().clone();
-    const to = new THREE.Vector3(hit.x, hit.y, hit.z);
-    this.rope = null;
-    this.shot = { to, t: 0, dist: from.distanceTo(to), hit };
-    this.sfx.shoot();
-  }
   // ヘリから垂らしたロープにつかまる (anchor はヘリと一緒に動く)
   grab(anchor) {
-    this.shot = null;
     const L = anchor.distanceTo(this.hand());
     this.rope = { a: anchor, L: Math.max(8, L), bd: null, heli: true };
     if (this.grounded || this.p.y < 4) {
@@ -72,7 +61,6 @@ export class Player {
     this.events.push({ type: 'attach', bd: null, dist: L });
   }
   release() {
-    if (this.shot) { this.shot = null; return; }
     if (!this.rope) return;
     this.rope = null;
     const sp = this.v.length();
@@ -102,27 +90,6 @@ export class Player {
     const SUB = 4;
     const h = dt / SUB;
     this.stun = Math.max(0, this.stun - dt);
-    // 飛んでいるロープ
-    if (this.shot) {
-      this.shot.t += dt * P.ROPE_SPEED;
-      if (this.shot.t >= this.shot.dist) {
-        const hit = this.shot.hit;
-        const a = this.shot.to;
-        const L = a.distanceTo(this.hand());
-        this.rope = { a, L: Math.max(2, L * 0.96), bd: hit.bd, n: new THREE.Vector3(hit.nx, hit.ny, hit.nz) };
-        this.shot = null;
-        // アンカーへ引き上げる。地面や遅いときは長く (上に上がれる)、速く飛んでいるときは少しだけ (振りが速くなる)
-        const sp = this.v.length();
-        const up = a.y - this.p.y;
-        if (this.grounded || this.p.y < 4) {
-          this.grounded = false;
-          this.v.y = Math.max(this.v.y, 7);
-          this.rope.lift = 1.4;
-        } else if (up > 10) this.rope.lift = sp < 20 ? 0.9 : 0.35;
-        this.sfx.attach();
-        this.events.push({ type: 'attach', bd: hit.bd, dist: L });
-      }
-    }
     // カメラの向きを基準にした入力の向き
     const cy = Math.cos(input.yaw), sy = Math.sin(input.yaw);
     // 前 = (-sin yaw, 0, -cos yaw)
@@ -359,10 +326,6 @@ export class Player {
     const rm = this.ropeMesh;
     let to = null;
     if (this.rope) to = this.rope.a;
-    else if (this.shot) {
-      const h = this.hand();
-      to = h.clone().lerp(this.shot.to, Math.min(1, this.shot.t / this.shot.dist));
-    }
     if (to) {
       const h = this.hand().clone();
       const d = to.clone().sub(h);
