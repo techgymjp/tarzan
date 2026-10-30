@@ -8,7 +8,7 @@ import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
 import { CITY } from './city-data.js';
-import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome } from './landmarks.js';
+import { addTokyoTower, addDiet, addSkytree, addFuji, addTechGym, addTokyoDome, addBudokan } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
 // 結果のシェアに付ける紹介記事の URL
@@ -98,6 +98,7 @@ const tower = addTokyoTower(scene, city);
 addDiet(scene, city);
 const techgym = addTechGym(scene, city);
 const dome = addTokyoDome(scene, city);
+const budokan = addBudokan(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
 const sfx = new Sfx();
@@ -146,7 +147,7 @@ for (const [name, lat, lon] of FAMOUS) {
 }
 // 東京タワー・国会議事堂も
 const dietXZ = ll(35.6759, 139.7448);
-for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]]]) {
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]], ['テックジム東京本校', techgym.pos[0], 196, techgym.pos[1]], ['東京ドーム', dome.pos[0], 72, dome.pos[1]], ['日本武道館', budokan.pos[0], 60, budokan.pos[1]]]) {
   const sp = labelSprite(name);
   sp.position.set(x, y, z);
   scene.add(sp);
@@ -327,7 +328,11 @@ function pickRoof(x, z, label) {
   if (label) {
     // 同じ名前の屋上 (複数あれば一番高いもの)
     let named = null;
-    for (const bd of city.bld) if (bd.name === label && Math.hypot(bd.cx - x, bd.cz - z) < 400 && (!named || bd.h > named.h)) named = bd;
+    for (const bd of city.bld) {
+      if (bd.name !== label || Math.hypot(bd.cx - x, bd.cz - z) >= 400) continue;
+      if (bd.cpAt) { named = bd; break; } // チェックポイントを置く段が決まっている名所
+      if (!named || bd.h > named.h) named = bd;
+    }
     if (named) return named;
   }
   for (const rad of [100, 220]) {
@@ -350,7 +355,7 @@ function setupRings(m) {
   clearRings();
   for (const [x, z, label] of m.rings) {
     const bd = pickRoof(x, z, label);
-    const [px, pz] = bd ? roofPoint(bd) : [x, z];
+    const [px, pz] = bd ? (bd.cpAt || roofPoint(bd)) : [x, z];
     const y = (bd ? bd.h : 0) + 2.2; // 屋上に立って手が届く高さ
     const mesh = new THREE.Group();
     const orb = new THREE.Mesh(orbGeo, new THREE.MeshBasicMaterial({ color: 0xfff0b0, fog: false }));

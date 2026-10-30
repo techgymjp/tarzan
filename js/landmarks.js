@@ -417,3 +417,50 @@ export function addTokyoDome(scene, city) {
     setNight(k) { roofMat.emissive.setHex(k === 'night' ? 0x6a7280 : k === 'dusk' ? 0x2a2c30 : 0x000000); },
   };
 }
+
+// 日本武道館 (千代田区北の丸公園2-3)。PLATEAU では八角形の箱なので、反りのある八角形の大屋根と
+// 金色の擬宝珠 (ぎぼし) を作る。幅 約110m・高さ 約45m。屋根の段に降りられる
+export function addBudokan(scene, city) {
+  const [X, Z] = ll(35.69332, 139.74983);
+  const g = new THREE.Group();
+  g.position.set(X, 0, Z);
+  g.rotation.y = Math.PI / 8; // 八角形の辺を東西南北に向ける
+  const oct = (profile) => new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), 8);
+  // 本体 (白い壁と窓の帯)
+  const wallTex = canvasTex(512, 64, (c, w, h) => {
+    c.fillStyle = '#ece6d8';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#5a5246';
+    for (let x = 0; x < w; x += 32) c.fillRect(x + 6, h * 0.35, 20, h * 0.4);
+  });
+  wallTex.wrapS = THREE.RepeatWrapping;
+  wallTex.repeat.set(4, 1);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(55, 56, 14, 8, 1, true), new THREE.MeshLambertMaterial({ map: wallTex, side: THREE.DoubleSide }));
+  body.position.y = 7;
+  g.add(body);
+  // 大屋根: 富士山のように反った八角形 (下ほどゆるい)
+  const roofMat = new THREE.MeshLambertMaterial({ color: 0x5f6c66, side: THREE.DoubleSide });
+  g.add(new THREE.Mesh(oct([[60, 13.5], [48, 16.5], [38, 20.5], [30, 25], [23, 30]]), roofMat));
+  // 上の段 (白い胴と小屋根)
+  const drum = new THREE.Mesh(new THREE.CylinderGeometry(21, 21, 3.5, 8, 1, true), new THREE.MeshLambertMaterial({ color: 0xf2eee4, side: THREE.DoubleSide }));
+  drum.position.y = 31.6;
+  g.add(drum);
+  g.add(new THREE.Mesh(oct([[25, 33], [16, 36], [8, 39], [2.5, 40.6]]), roofMat));
+  // 金色の擬宝珠
+  const gold = new THREE.MeshLambertMaterial({ color: 0xe0b030, emissive: 0x3a2800 });
+  g.add(new THREE.Mesh(new THREE.LatheGeometry([[0, 40.4], [2.4, 41.2], [3.3, 42.4], [2.6, 43.8], [1.1, 44.9], [0.35, 45.6], [0, 46.3]].map(([r, y]) => new THREE.Vector2(r, y)), 16), gold));
+  scene.add(g);
+  // 当たり判定: 八角形の柱を段々に (屋根の段に降りられる)
+  const octPts = (r) => {
+    const pts = [];
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; pts.push(X + Math.cos(a) * r, Z - Math.sin(a) * r); }
+    return pts;
+  };
+  for (const [r, y] of [[57, 14], [48, 16.5], [38, 20.5], [30, 25], [23, 30], [21, 33], [16, 36], [8, 39]]) {
+    const bd = city.addPrism(octPts(r), 0, y, '日本武道館');
+    bd.roof = true;
+    // チェックポイントの玉は大屋根の段 (高さ25m) の東側に置く
+    if (y === 25) bd.cpAt = [X + 26, Z];
+  }
+  return { pos: [X, Z] };
+}

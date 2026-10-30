@@ -29,6 +29,7 @@ def load(f):
 # 手作りのモデルに置き換える所 (緯度, 経度, 半径m) … ここの PLATEAU の建物は除く
 REPLACE = [
     (35.70563, 139.75192, 105),  # 東京ドーム (PLATEAU では円柱の箱)
+    (35.69332, 139.74983, 62),   # 日本武道館 (PLATEAU では八角形の箱)
 ]
 rep_xy = [((lo - LON0) * KX, -(la - LAT0) * KZ, r) for la, lo, r in REPLACE]
 
