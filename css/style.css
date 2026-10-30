@@ -129,3 +129,33 @@ table.keys th { color: var(--accent); white-space: nowrap; }
 #countdown { font-size: 80px; }
   .panel { padding: 16px; }
 }
+
+/* スマホ縦向き: 上の情報が重ならないように並べ直す
+   左上: タイム・輪・鬼 (折り返す) → その下に速さ・高さ・得点
+   右上: ミニマップ → その下にやり直し・一時停止
+   中央: 次の目的地 (ミニマップより下) → 地名 */
+@media (orientation: portrait) {
+  body.touch #topbar { top: 10px; left: 12px; right: 158px; flex-wrap: wrap; gap: 4px 10px; font-size: 15px; }
+  body.touch #timer { font-size: 20px; }
+  body.touch #oni { font-size: 14px; padding: 1px 8px; }
+  body.touch #stats { top: 74px; left: 12px; }
+  body.touch #stats div { font-size: 20px; }
+  body.touch #stats .score { font-size: 18px; }
+  body.touch #minimap { width: 130px; height: 130px; top: 10px; right: 12px; }
+  body.touch #tRetry { top: 150px; right: 66px; }
+  body.touch #tPause { top: 150px; right: 12px; }
+  body.touch #nav { top: 206px; background: rgba(0,0,0,0.35); padding: 4px 12px 6px; border-radius: 14px; max-width: calc(100% - 24px); }
+  body.touch #navText { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.touch #area { top: 270px; font-size: 20px; }
+  body.touch #combo { top: 150px; right: auto; left: 12px; font-size: 24px; text-align: left; }
+  body.touch #groundTip { top: calc(50% + 60px); }
+}
+/* スマホ: お知らせは操作ボタンと重ならない所に (長い文は折り返す) */
+body.touch #toast { white-space: normal; max-width: calc(100% - 24px); text-align: center; font-size: 15px; }
+@media (orientation: portrait) {
+  body.touch #toast { bottom: auto; top: 310px; }
+}
+@media (orientation: landscape) {
+  body.touch #toast { bottom: auto; top: 112px; max-width: 46%; }
+  body.touch #combo { top: 150px; right: 14px; font-size: 26px; }
+}
