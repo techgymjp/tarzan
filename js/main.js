@@ -323,6 +323,52 @@ function roofPoint(bd) {
   }
   return [bd.cx, bd.cz];
 }
+// 点 (x, z) から多角形の辺までの距離
+function edgeDist(bd, x, z) {
+  const P = bd.pts, n = bd.n;
+  let best = 1e9;
+  for (let i = 0; i < n; i++) {
+    const ax = P[i * 2], az = P[i * 2 + 1], j = (i + 1) % n;
+    const ex = P[j * 2] - ax, ez = P[j * 2 + 1] - az;
+    const L2 = ex * ex + ez * ez || 1e-9;
+    const t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / L2));
+    best = Math.min(best, Math.hypot(x - ax - ex * t, z - az - ez * t));
+  }
+  return best;
+}
+// チェックポイントの玉を置く点: 屋上 bd の上で、もっと高い建物 (隣の高層部・塔・屋上の設備) の中でも
+// その壁際でもなく、屋上のふちからも離れた所。PLATEAU では1つのビルが高さ違いの建物に分かれて重なっていることがあり、
+// 屋上の真ん中が高い方の建物に埋まってしまうため。戻り値: [x, z, 玉の下の屋上の高さ]
+function orbSpot(bd) {
+  const taller = [];
+  const seen = new Set();
+  for (let gx = bd.minx - 8; gx <= bd.maxx + 8 + 31; gx += 32) {
+    for (let gz = bd.minz - 8; gz <= bd.maxz + 8 + 31; gz += 32) {
+      for (const o of city.cell(Math.min(gx, bd.maxx + 8), Math.min(gz, bd.maxz + 8)) || []) {
+        if (o === bd || seen.has(o)) continue;
+        seen.add(o);
+        if (o.y0 <= bd.h + 0.5 && o.h > bd.h + 0.3) taller.push(o);
+      }
+    }
+  }
+  const blocked = (x, z) => taller.some((o) => x > o.minx - 4 && x < o.maxx + 4 && z > o.minz - 4 && z < o.maxz + 4 && (city.inside(o, x, z) || edgeDist(o, x, z) < 3.5));
+  const w = bd.maxx - bd.minx, d = bd.maxz - bd.minz;
+  const step = Math.max(1.5, Math.min(w, d) / 14);
+  for (const margin of [3, 1.5]) {
+    let best = null, bs = 1e18;
+    for (let x = bd.minx + step / 2; x < bd.maxx; x += step) {
+      for (let z = bd.minz + step / 2; z < bd.maxz; z += step) {
+        if (!city.inside(bd, x, z) || edgeDist(bd, x, z) < margin || blocked(x, z)) continue;
+        const sc = (x - bd.cx) ** 2 + (z - bd.cz) ** 2; // 屋上の真ん中に近いほど良い
+        if (sc < bs) { bs = sc; best = [x, z, bd.h]; }
+      }
+    }
+    if (best) return best;
+  }
+  // 見つからなければ、その場所でいちばん高い屋上の上
+  const [x, z] = roofPoint(bd);
+  return [x, z, city.floorAt(x, z, 1e9).y];
+}
 // (x, z) の近くで、高くて近い屋上 (PLATEAU のビルか、屋上に立てる名所)。label と同じ名前の屋上があればそれ
 function pickRoof(x, z, label) {
   if (label) {
@@ -355,8 +401,8 @@ function setupRings(m) {
   clearRings();
   for (const [x, z, label] of m.rings) {
     const bd = pickRoof(x, z, label);
-    const [px, pz] = bd ? (bd.cpAt || roofPoint(bd)) : [x, z];
-    const y = (bd ? bd.h : 0) + 2.2; // 屋上に立って手が届く高さ
+    const [px, pz, top] = bd ? (bd.cpAt ? [...bd.cpAt, bd.h] : orbSpot(bd)) : [x, z, 0];
+    const y = top + 3.0; // 屋上に立って手が届く高さ (脈打って大きくなっても床にめり込まない)
     const mesh = new THREE.Group();
     const orb = new THREE.Mesh(orbGeo, new THREE.MeshBasicMaterial({ color: 0xfff0b0, fog: false }));
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
@@ -1288,7 +1334,7 @@ function update(dt) {
   // つかめる位置にいたら知らせる
   const canGrab = !player.rope && heli.reachDist(player.hand()) <= REACH;
   $('groundTip').classList.toggle('hidden', !canGrab);
-  $('groundTip').textContent = isTouch ? 'つかめる！ ロープ ボタンをタップ' : 'つかめる！ スペースキー';
+  $('groundTip').textContent = isTouch ? 'つかめる！「つかむ」ボタンをタップ' : 'つかめる！ スペースキー';
   $('tRope').classList.toggle('ready', canGrab);
   $('tRope').textContent = player.rope ? 'はなす' : 'つかむ';
 
