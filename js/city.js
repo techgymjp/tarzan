@@ -375,8 +375,11 @@ export class City {
     const col = new THREE.Color();
     let seed = 12345;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    const GLASS = [[0.55, 0.68, 0.8], [0.45, 0.58, 0.72], [0.62, 0.7, 0.74], [0.5, 0.62, 0.66], [0.7, 0.76, 0.82]];
-    const OFFICE = [[0.86, 0.84, 0.8], [0.78, 0.76, 0.72], [0.9, 0.88, 0.84], [0.74, 0.7, 0.64], [0.82, 0.78, 0.72], [0.66, 0.66, 0.68], [0.8, 0.72, 0.62]];
+    // カラフルな街: 高いビルは色ガラス、低いビルはパステルやビビッドな外壁
+    const GLASS = [[0.35, 0.65, 1.0], [0.2, 0.85, 0.85], [0.6, 0.45, 1.0], [1.0, 0.45, 0.7], [0.4, 0.95, 0.55],
+      [1.0, 0.75, 0.3], [0.95, 0.35, 0.35], [0.55, 0.8, 1.0], [0.9, 0.9, 0.35], [0.3, 0.5, 0.95]];
+    const OFFICE = [[1.0, 0.6, 0.55], [1.0, 0.82, 0.45], [0.6, 0.85, 0.6], [0.55, 0.75, 1.0], [0.85, 0.65, 1.0],
+      [1.0, 0.7, 0.85], [0.5, 0.9, 0.85], [1.0, 0.95, 0.6], [0.95, 0.55, 0.35], [0.7, 0.95, 0.45], [0.95, 0.95, 0.95]];
     for (const bd of this.bld) {
       if (!bd.plateau) continue;
       const t = tile(bd);
@@ -384,7 +387,7 @@ export class City {
       const B = glass ? t.glass : t.office;
       const pal = glass ? GLASS : OFFICE;
       const c = pal[Math.floor(rnd() * pal.length)];
-      const sh = 0.9 + rnd() * 0.2;
+      const sh = 0.85 + rnd() * 0.2;
       col.setRGB(c[0] * sh, c[1] * sh, c[2] * sh);
       // 窓の模様をビルごとにずらす
       const uo = Math.floor(rnd() * 8) / 8, vo = Math.floor(rnd() * 8) / 8;
@@ -410,14 +413,15 @@ export class City {
       for (let i = 0; i < n; i++) shape.push(new THREE.Vector2(P[i * 2], P[i * 2 + 1]));
       let tris;
       try { tris = THREE.ShapeUtils.triangulateShape(shape, []); } catch (e) { tris = []; }
-      const rc = 0.5 + rnd() * 0.2;
+      const rc = 0.55 + rnd() * 0.2;
+      const rr = rc * (0.8 + col.r * 0.25), rg = rc * (0.8 + col.g * 0.25), rb = rc * (0.8 + col.b * 0.25);
       for (const tr of tris) {
         const [a, b2, c2] = tr;
         const ax = P[a * 2], az = P[a * 2 + 1], bx = P[b2 * 2], bz = P[b2 * 2 + 1], cx = P[c2 * 2], cz = P[c2 * 2 + 1];
         const ny = (bz - az) * (cx - ax) - (bx - ax) * (cz - az);
         if (ny >= 0) t.roof.p.push(ax, h, az, bx, h, bz, cx, h, cz);
         else t.roof.p.push(ax, h, az, cx, h, cz, bx, h, bz);
-        for (let k = 0; k < 3; k++) { t.roof.n.push(0, 1, 0); t.roof.c.push(rc, rc, rc * 1.02); }
+        for (let k = 0; k < 3; k++) { t.roof.n.push(0, 1, 0); t.roof.c.push(rr, rg, rb); }
         t.roof.uv.push(ax / 8, az / 8, bx / 8, bz / 8, cx / 8, cz / 8);
       }
     }

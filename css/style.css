@@ -17,11 +17,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
 
 /* HUD */
 #hud { position: fixed; inset: 0; pointer-events: none; text-shadow: 0 2px 4px rgba(0,0,0,0.7); }
-#crosshair { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px;
-  border: 2px solid rgba(255,255,255,0.55); border-radius: 50%; transition: border-color 0.1s, transform 0.1s; }
-#crosshair div { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: #fff; border-radius: 50%; }
-#crosshair.ok { border-color: var(--ok); transform: scale(0.8); box-shadow: 0 0 10px var(--ok); }
-#crosshair.ok div { background: var(--ok); }
 #topbar { position: absolute; top: 12px; left: 16px; display: flex; gap: 18px; font-weight: 800; font-size: 22px; align-items: baseline; }
 #timer { font-variant-numeric: tabular-nums; font-size: 30px; }
 #rings, #dex { color: var(--accent); }
@@ -51,6 +46,9 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
   border: 3px solid rgba(255,255,255,0.7); background: rgba(10,20,30,0.5); }
 #hint { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 14px; opacity: 0.85;
   background: rgba(0,0,0,0.35); padding: 4px 12px; border-radius: 12px; white-space: nowrap; }
+#groundTip { position: absolute; top: calc(50% + 34px); left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 800;
+  color: #39ff8a; background: rgba(0,0,0,0.5); padding: 4px 14px; border-radius: 14px; white-space: nowrap; animation: tipPulse 1.2s ease-in-out infinite; }
+@keyframes tipPulse { 50% { opacity: 0.6; } }
 #countdown { position: absolute; left: 50%; top: 35%; transform: translate(-50%, -50%); font-size: 120px; font-weight: 900; color: var(--accent); }
 
 /* スマホ */
@@ -59,10 +57,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1020; col
   background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.35); pointer-events: auto; }
 #knob { position: absolute; left: 40px; top: 40px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.5); }
 #tbtns { position: absolute; right: 20px; bottom: 20px; display: grid; grid-template-columns: 90px 90px; gap: 12px; pointer-events: auto; }
-#tbtns button, #tPause { border: 2px solid rgba(255,255,255,0.6); background: rgba(0,0,0,0.35); color: #fff; font-weight: 800;
+#tbtns button, #tPause, #tRetry { border: 2px solid rgba(255,255,255,0.6); background: rgba(0,0,0,0.35); color: #fff; font-weight: 800;
   border-radius: 50%; width: 90px; height: 90px; font-size: 16px; touch-action: none; }
 #tbtns #tRope { background: rgba(255,176,32,0.55); grid-row: span 1; }
 #tbtns button.on { background: rgba(255,255,255,0.45); }
+#tbtns #tRope.ready { background: rgba(57,255,138,0.6); box-shadow: 0 0 16px #39ff8a; }
+#tRetry { position: absolute; top: 14px; right: 210px; width: 44px; height: 44px; font-size: 20px; pointer-events: auto; border-radius: 50%; }
 #tPause { position: absolute; top: 14px; right: 158px; width: 44px; height: 44px; font-size: 14px; pointer-events: auto; }
 body.touch #minimap { width: 130px; height: 130px; }
 body.touch #combo { right: 160px; }
@@ -116,6 +116,9 @@ table.keys th { color: var(--accent); white-space: nowrap; }
   h1 { font-size: 32px; }
   #topbar { font-size: 16px; } #timer { font-size: 22px; }
   #area { font-size: 20px; top: 70px; }
-  #countdown { font-size: 80px; }
+  #groundTip { position: absolute; top: calc(50% + 34px); left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 800;
+  color: #39ff8a; background: rgba(0,0,0,0.5); padding: 4px 14px; border-radius: 14px; white-space: nowrap; animation: tipPulse 1.2s ease-in-out infinite; }
+@keyframes tipPulse { 50% { opacity: 0.6; } }
+#countdown { font-size: 80px; }
   .panel { padding: 16px; }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""東京ターザンの街のデータ (js/city-data.js) を作る。
+"""ターザン大東京の街のデータ (js/city-data.js) を作る。
 
 首都高グランプリ (https://github.com/techgymjp/shutoko) のコースデータ js/course-*-data.js には、
 首都高に沿った PLATEAU の建物 (輪郭・高さ・名前) と OpenStreetMap の首都高の線が入っている。

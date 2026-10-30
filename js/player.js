@@ -6,12 +6,11 @@ export const P = {
   DRAG: 0.0032,   // 空気抵抗 (v^2)
   ROPE_MAX: 150,  // ロープが届く距離
   ROPE_SPEED: 650,
-  REEL: 26,       // 巻き取り m/s
   PUMP: 11,       // ぶら下がり中のこぎ
   AIR: 9,         // 空中の操作
   RUN: 13,
+  RUN_MAX: 34,    // 押し続けたときの最高速 (約3秒で到達)
   JUMP: 13,
-  ZIP: 22,
   R: 0.55,
   HAND: 1.3,
 };
@@ -27,12 +26,13 @@ export class Player {
     this.groundWhat = 'ground';
     this.rope = null;        // { a: Vector3, L, bd }
     this.shot = null;        // 飛んでいるロープ { from, to, t, dist, hit }
-    this.zipCd = 0;
     this.stun = 0;
     this.airTime = 0;
     this.events = [];
     this.contacts = [];
     this.facing = 0;
+    this.camYaw = 0;
+    this.moveHold = 0; // 移動を押し続けている秒数 (長く押すほど加速)
     this.anim = 0;
     this.buildModel(scene);
   }
@@ -57,6 +57,20 @@ export class Player {
     this.shot = { to, t: 0, dist: from.distanceTo(to), hit };
     this.sfx.shoot();
   }
+  // ヘリから垂らしたロープにつかまる (anchor はヘリと一緒に動く)
+  grab(anchor) {
+    this.shot = null;
+    const L = anchor.distanceTo(this.hand());
+    this.rope = { a: anchor, L: Math.max(8, L), bd: null, heli: true };
+    if (this.grounded || this.p.y < 4) {
+      this.grounded = false;
+      this.v.y = Math.max(this.v.y, 7);
+    }
+    // ぶら下がるのにちょうどいい長さ (約16m) まで引き上げる
+    this.rope.lift = Math.max(0.3, (this.rope.L - 16) / 45 + 0.3);
+    this.sfx.attach();
+    this.events.push({ type: 'attach', bd: null, dist: L });
+  }
   release() {
     if (this.shot) { this.shot = null; return; }
     if (!this.rope) return;
@@ -74,20 +88,6 @@ export class Player {
     } else this.sfx.release();
     this.events.push({ type: 'release', nice, speed: sp });
   }
-  zip() {
-    if (!this.rope || this.zipCd > 0) return false;
-    const d = this.rope.a.clone().sub(this.hand());
-    const L = d.length();
-    d.normalize();
-    this.v.addScaledVector(d, P.ZIP);
-    this.v.y += 5;
-    this.rope.L = Math.max(3, Math.min(this.rope.L, L) * 0.8);
-    this.zipCd = 0.9;
-    this.grounded = false;
-    this.sfx.zip();
-    this.events.push({ type: 'zip' });
-    return true;
-  }
   jump() {
     if (this.grounded && this.stun <= 0) {
       this.v.y = P.JUMP;
@@ -97,11 +97,10 @@ export class Player {
     return false;
   }
 
-  // input: { mx, mz (カメラ基準の移動 -1..1), reel, yaw }
+  // input: { mx, mz (カメラ基準の移動 -1..1), yaw }
   update(dt, input) {
     const SUB = 4;
     const h = dt / SUB;
-    this.zipCd = Math.max(0, this.zipCd - dt);
     this.stun = Math.max(0, this.stun - dt);
     // 飛んでいるロープ
     if (this.shot) {
@@ -112,10 +111,14 @@ export class Player {
         const L = a.distanceTo(this.hand());
         this.rope = { a, L: Math.max(2, L * 0.96), bd: hit.bd, n: new THREE.Vector3(hit.nx, hit.ny, hit.nz) };
         this.shot = null;
-        if (this.grounded) {
+        // アンカーへ引き上げる。地面や遅いときは長く (上に上がれる)、速く飛んでいるときは少しだけ (振りが速くなる)
+        const sp = this.v.length();
+        const up = a.y - this.p.y;
+        if (this.grounded || this.p.y < 4) {
           this.grounded = false;
           this.v.y = Math.max(this.v.y, 7);
-        }
+          this.rope.lift = 1.4;
+        } else if (up > 10) this.rope.lift = sp < 20 ? 0.9 : 0.35;
         this.sfx.attach();
         this.events.push({ type: 'attach', bd: hit.bd, dist: L });
       }
@@ -126,6 +129,7 @@ export class Player {
     const fx = -sy, fz = -cy, rx = cy, rz = -sy;
     const wx = fx * input.mz + rx * input.mx, wz = fz * input.mz + rz * input.mx;
     const wl = Math.hypot(wx, wz);
+    this.moveHold = wl > 0.3 ? this.moveHold + dt : 0;
     for (let s = 0; s < SUB; s++) this.step(h, input, wx, wz, wl);
     this.airTime = this.grounded ? 0 : this.airTime + dt;
     this.animate(dt);
@@ -136,10 +140,11 @@ export class Player {
     this.prev.copy(p);
     if (this.grounded && !this.rope) {
       // 走る
-      const run = this.stun > 0 ? 0 : P.RUN;
+      const boost = Math.min(1, this.moveHold / 3);
+      const run = this.stun > 0 ? 0 : P.RUN + (P.RUN_MAX - P.RUN) * boost;
       const tx = wl > 0.01 ? wx / Math.max(1, wl) * run : 0;
       const tz = wl > 0.01 ? wz / Math.max(1, wl) * run : 0;
-      const k = Math.min(1, h * (wl > 0.01 ? 8 : 6));
+      const k = Math.min(1, h * (wl > 0.01 ? 4 + 4 * (1 - boost) : 6));
       v.x += (tx - v.x) * k;
       v.z += (tz - v.z) * k;
       v.y = 0;
@@ -148,12 +153,15 @@ export class Player {
       const sp = v.length();
       v.multiplyScalar(Math.max(0, 1 - P.DRAG * sp * h));
       if (wl > 0.01) {
-        const acc = this.rope ? P.PUMP : P.AIR;
+        const acc = (this.rope ? P.PUMP : P.AIR) * (1 + Math.min(1, this.moveHold / 2) * 1.5);
         v.x += wx / Math.max(1, wl) * acc * h;
         v.z += wz / Math.max(1, wl) * acc * h;
       }
     }
-    if (this.rope && input.reel) this.rope.L = Math.max(2.5, this.rope.L - P.REEL * h);
+    if (this.rope && this.rope.lift > 0) {
+      this.rope.lift -= h;
+      this.rope.L = Math.max(this.rope.heli ? 16 : 6, this.rope.L - 45 * h);
+    }
     // 振り子のいちばん下が地面 (床) にぶつかりそうなら少しずつ巻き取る (地面すれすれを抜けるアシスト)
     if (this.rope && !this.grounded && v.y < 0) {
       const floor = this.floorY || 0;
@@ -286,14 +294,15 @@ export class Player {
     const v = this.v, g = this.model;
     g.position.copy(this.p);
     const hs = Math.hypot(v.x, v.z);
-    if (hs > 1.5) {
-      const target = Math.atan2(-v.x, -v.z);
+    if (!this.grounded || hs > 1.5) {
+      // 空中ではいつもカメラに背中を向ける (向こうへ飛んでいくのが分かるように)
+      const target = this.grounded ? Math.atan2(-v.x, -v.z) : this.camYaw;
       let d = target - this.facing;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.facing += d * Math.min(1, dt * 10);
     }
     g.rotation.set(0, this.facing, 0);
-    this.anim += dt * (this.grounded ? hs * 0.9 : 6);
+    this.anim += dt * (this.grounded ? Math.min(hs, 18) * 0.9 : 6);
     const body = this.body;
     if (this.rope) {
       // ロープの向きに体を傾ける

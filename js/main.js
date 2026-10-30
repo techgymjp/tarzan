@@ -1,9 +1,12 @@
-// 東京ターザン: 進行・入力・カメラ・照準・ミッション・得点・図鑑・HUD
+// ターザン大東京: 進行・入力・カメラ・照準・ミッション・得点・図鑑・HUD
 import * as THREE from '../vendor/three.module.min.js';
 import { City, ll } from './city.js';
 import { Player, P } from './player.js';
-import { Sfx } from './audio.js';
-import { MISSIONS, AREAS } from './missions.js';
+import { Sfx, Bgm } from './audio.js';
+import { MISSIONS, AREAS, FAMOUS } from './missions.js';
+import { Fireworks } from './fireworks.js';
+import { Heli } from './heli.js';
+import { CITY } from './city-data.js';
 import { addTokyoTower, addDiet, addSkytree, addFuji } from './landmarks.js';
 
 const $ = (id) => document.getElementById(id);
@@ -57,7 +60,7 @@ function windowTex(kind, lit) {
   const g = c.getContext('2d');
   let s = kind === 'glass' ? 7 : 3;
   const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  g.fillStyle = lit ? '#000' : (kind === 'glass' ? '#9fb3c8' : '#d8d4cc');
+  g.fillStyle = lit ? '#000' : (kind === 'glass' ? '#e8eef4' : '#ffffff');
   g.fillRect(0, 0, 256, 256);
   for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
     const on = rnd() < (kind === 'glass' ? 0.45 : 0.35);
@@ -67,7 +70,7 @@ function windowTex(kind, lit) {
       g.fillStyle = w < 0.6 ? '#ffd9a0' : w < 0.85 ? '#fff4dc' : '#bfe0ff';
     } else {
       const t = 0.75 + rnd() * 0.25;
-      g.fillStyle = kind === 'glass' ? `rgb(${40 * t},${62 * t},${86 * t})` : `rgb(${70 * t},${82 * t},${96 * t})`;
+      g.fillStyle = kind === 'glass' ? `rgb(${120 * t},${140 * t},${165 * t})` : `rgb(${80 * t},${92 * t},${110 * t})`;
     }
     if (kind === 'glass') g.fillRect(x * 32 + 1, y * 32 + 3, 30, 27);
     else g.fillRect(x * 32 + 6, y * 32 + 8, 20, 17);
@@ -93,7 +96,76 @@ addDiet(scene, city);
 const skytreeMat = addSkytree(scene);
 addFuji(scene);
 const sfx = new Sfx();
+const bgm = new Bgm(sfx);
+let bgmOn = store.get('bgm', true);
 const player = new Player(scene, city, sfx);
+const fireworks = new Fireworks(scene);
+const heli = new Heli(scene, city);
+
+// 著名なビルに名前を付けて、屋上の上にラベルを浮かべる
+const labels = [];
+function labelSprite(text) {
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d');
+  const font = 'bold 44px "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif';
+  g.font = font;
+  const w = Math.ceil(g.measureText(text).width) + 40;
+  c.width = w; c.height = 72;
+  g.font = font;
+  g.fillStyle = 'rgba(10,16,30,0.72)';
+  g.beginPath(); g.roundRect(0, 0, w, 60, 18); g.fill();
+  g.beginPath(); g.moveTo(w / 2 - 12, 58); g.lineTo(w / 2 + 12, 58); g.lineTo(w / 2, 72); g.fill();
+  g.fillStyle = '#fff';
+  g.textBaseline = 'middle';
+  g.fillText(text, 20, 31);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, sizeAttenuation: false, depthWrite: false, transparent: true, fog: false }));
+  sp.center.set(0.5, 0);
+  sp.userData.aspect = w / 72;
+  return sp;
+}
+for (const [name, lat, lon] of FAMOUS) {
+  const [x, z] = ll(lat, lon);
+  let best = null;
+  for (let gx = -2; gx <= 2; gx++) for (let gz = -2; gz <= 2; gz++) {
+    for (const bd of city.cell(x + gx * 30, z + gz * 30) || []) {
+      if (!bd.plateau || (bd.cx - x) ** 2 + (bd.cz - z) ** 2 > 70 * 70) continue;
+      if (!best || bd.h > best.h) best = bd;
+    }
+  }
+  if (!best) continue;
+  best.name = name;
+  best.famous = true;
+}
+// 東京タワー・国会議事堂も
+const dietXZ = ll(35.6759, 139.7448);
+for (const [name, x, y, z] of [['東京タワー', tower.pos[0], 345, tower.pos[1]], ['国会議事堂', dietXZ[0], 75, dietXZ[1]]]) {
+  const sp = labelSprite(name);
+  sp.position.set(x, y, z);
+  scene.add(sp);
+  labels.push({ sp, x, z });
+}
+for (const bd of city.bld) {
+  if (!bd.famous) continue;
+  if (labels.some((l) => l.text === bd.name)) continue;
+  const sp = labelSprite(bd.name);
+  sp.position.set(bd.cx, bd.h + 12, bd.cz);
+  scene.add(sp);
+  labels.push({ sp, x: bd.cx, z: bd.cz, text: bd.name });
+}
+function updateLabels() {
+  const cp = camera.position;
+  for (const l of labels) {
+    const d = Math.hypot(l.x - cp.x, l.z - cp.z);
+    const vis = d < 1600 && game.state === 'play';
+    l.sp.visible = vis;
+    if (!vis) continue;
+    const s = 0.06 * THREE.MathUtils.clamp(1.2 - d / 2000, 0.55, 1);
+    l.sp.scale.set(s * l.sp.userData.aspect, s, 1);
+    l.sp.material.opacity = THREE.MathUtils.clamp((1600 - d) / 300, 0, 1);
+  }
+}
 
 // 地面: ビルのある所は舗装、ない所は緑 (公園・皇居・住宅地の木々)
 const GB = { x0: city.minX - 2500, x1: city.maxX + 2500, z0: city.minZ - 2500, z1: city.maxZ + 2500 };
@@ -172,10 +244,6 @@ scene.add(outer);
 const blob = new THREE.Mesh(new THREE.CircleGeometry(0.7, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }));
 blob.rotation.x = -Math.PI / 2;
 scene.add(blob);
-// 照準の先の印
-const marker = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.4, 24), new THREE.MeshBasicMaterial({ color: 0x39ff8a, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthTest: false, fog: false }));
-marker.renderOrder = 10;
-scene.add(marker);
 
 // ---------- 時間帯 ----------
 let tod = store.get('tod', 'dusk');
@@ -276,23 +344,27 @@ const game = {
   t: 0, ringIdx: 0, score: 0, combo: 0, maxCombo: 0, groundT: 0, nearCd: 0,
   countdown: 0, maxSpeed: 0, nice: 0, newDex: 0, lastSafe: null,
 };
-const cam = { yaw: 0, pitch: -0.15, dist: 7, shake: 0, pos: new THREE.Vector3() };
+const cam = { yaw: 0, pitch: -0.15, dist: 7, shake: 0, pos: new THREE.Vector3(), lookIdle: 0 };
 
 function startGame(m) {
   sfx.resume();
   game.mission = m;
   game.mode = m === FREE ? 'free' : 'mission';
   game.t = 0; game.ringIdx = 0; game.score = 0; game.combo = 0; game.maxCombo = 0; game.groundT = 0;
-  game.maxSpeed = 0; game.nice = 0; game.newDex = 0;
+  game.maxSpeed = 0; game.nice = 0; game.newDex = 0; game.landings = 0; game.ropedSince = false;
+  fireworks.clear();
+  if (bgmOn) bgm.start();
   const sp = startPoint(m);
   player.reset(...sp);
   game.lastSafe = sp;
+  game.standBd = city.floorAt(sp[0], sp[2], sp[1] + 1).bd;
   if (game.mode === 'mission') setupRings(m); else clearRings();
   // 最初の輪 (フリーなら東京タワー) の方を向く
   const tgt = rings[0] ? rings[0].pos : new THREE.Vector3(tower.pos[0], 150, tower.pos[1]);
   cam.yaw = Math.atan2(-(tgt.x - sp[0]), -(tgt.z - sp[2]));
   cam.pitch = -0.1;
   player.facing = cam.yaw;
+  heli.reset(player.p, cam.yaw);
   game.countdown = game.mode === 'mission' ? 3.5 : 0;
   game.state = 'play';
   showScreen(null);
@@ -302,7 +374,7 @@ function startGame(m) {
   $('timer').classList.toggle('hidden', game.mode !== 'mission');
   $('nav').classList.toggle('hidden', game.mode !== 'mission');
   $('dex').classList.toggle('hidden', game.mode !== 'free');
-  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ 左クリック: ロープ ・ Space: ぐいっ/ジャンプ ・ Shift: 巻く ・ R: やり直し ・ Esc: 一時停止';
+  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ 左クリック: ロープ ・ Space: ジャンプ ・ R: やり直し ・ Esc: 一時停止';
   lastArea = '';
   lockPointer();
 }
@@ -313,7 +385,10 @@ function showScreen(id) {
 
 function finishMission() {
   game.state = 'result';
+  bgm.stop();
+  sfx.heli(null);
   sfx.finish();
+  launchFireworks(8, true, 0.35);
   unlockPointer();
   const m = game.mission;
   const L = routeLength(m);
@@ -328,7 +403,7 @@ function finishMission() {
   $('resStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
   $('resBody').innerHTML = `${m.title}<br><b>${fmt(t)}</b>${isBest ? ' <span style="color:#ffb020">ベスト更新！</span>' : `（ベスト ${fmt(prev.t)}）`}<br>
     得点 ${Math.round(game.score).toLocaleString()} pt ／ 最大コンボ ${game.maxCombo}<br>
-    最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h ／ ナイスリリース ${game.nice} 回<br>
+    最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h ／ ナイスリリース ${game.nice} 回 ／ 着地成功 ${game.landings} 回<br>
     <small>★★★ ${fmt(L / 34)} ／ ★★ ${fmt(L / 24)}</small>`;
   showScreen('result');
   $('hud').classList.add('hidden');
@@ -344,43 +419,35 @@ const fmt = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')
 
 // ---------- 入力 ----------
 const keys = {};
-const input = { mx: 0, mz: 0, reel: false, extend: false, yaw: 0 };
-let ropeHeld = false;
+const input = { mx: 0, mz: 0, yaw: 0 };
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
   keys[e.code] = true;
   if (game.state !== 'play') return;
-  if (e.code === 'Space') { e.preventDefault(); actionJumpZip(); }
-  if (e.code === 'KeyE') player.zip();
+  if (e.code === 'Space') { e.preventDefault(); player.jump(); }
   if (e.code === 'KeyR') respawn();
   if (e.code === 'KeyM') sfx.setMuted(!sfx.muted);
+  if (e.code === 'KeyB') setBgm(!bgmOn);
   if (e.code === 'KeyP') pause();
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
-function actionJumpZip() {
-  if (player.rope) player.zip();
-  else player.jump();
-}
 const canvas = renderer.domElement;
 function lockPointer() { if (!isTouch && canvas.requestPointerLock) try { canvas.requestPointerLock(); } catch (e) { /* 失敗してもドラッグで操作できる */ } }
 function unlockPointer() { if (document.pointerLockElement) document.exitPointerLock(); }
-let rightHeld = false;
 canvas.addEventListener('mousedown', (e) => {
   if (game.state !== 'play') return;
   sfx.resume();
   if (!document.pointerLockElement) { lockPointer(); if (e.button !== 0) return; }
-  if (e.button === 0) { ropeHeld = true; tryFire(); }
-  if (e.button === 2) rightHeld = true;
+  if (e.button === 0) tryFire();
 });
 addEventListener('mouseup', (e) => {
-  if (e.button === 0 && ropeHeld) { ropeHeld = false; player.release(); }
-  if (e.button === 2) rightHeld = false;
 });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 addEventListener('mousemove', (e) => {
   if (game.state !== 'play') return;
   if (document.pointerLockElement === canvas || e.buttons) {
     cam.yaw -= e.movementX * 0.0024;
+    if (Math.abs(e.movementX) > 1) cam.lookIdle = 0;
     cam.pitch = THREE.MathUtils.clamp(cam.pitch - e.movementY * 0.0024, -1.45, 1.35);
   }
 });
@@ -402,6 +469,7 @@ addEventListener('touchmove', (e) => {
   for (const t of e.changedTouches) {
     if (t.identifier === touchLook.id) {
       cam.yaw -= (t.clientX - touchLook.x) * 0.006;
+      cam.lookIdle = 0;
       cam.pitch = THREE.MathUtils.clamp(cam.pitch - (t.clientY - touchLook.y) * 0.006, -1.45, 1.35);
       touchLook.x = t.clientX; touchLook.y = t.clientY;
     }
@@ -432,54 +500,24 @@ const holdBtn = (id, down, up) => {
   el.addEventListener('touchend', (e) => { e.preventDefault(); el.classList.remove('on'); if (up) up(); });
   el.addEventListener('touchcancel', () => { el.classList.remove('on'); if (up) up(); });
 };
-let touchReel = false;
-holdBtn('tRope', () => { ropeHeld = true; tryFire(); }, () => { ropeHeld = false; player.release(); });
-holdBtn('tZip', () => player.zip());
+holdBtn('tRope', () => tryFire());
 holdBtn('tJump', () => player.jump());
-holdBtn('tReel', () => { touchReel = true; }, () => { touchReel = false; });
 $('tPause').addEventListener('click', () => pause());
+$('tRetry').addEventListener('click', () => { if (game.state === 'play') respawn(); });
 
-// ---------- 照準 ----------
-const tmpO = new THREE.Vector3(), tmpD = new THREE.Vector3();
-let aimHit = null;
+// ---------- ロープ (ヘリ) ----------
+const tmpD = new THREE.Vector3();
 function camForward(out) {
   const cp = Math.cos(cam.pitch);
   return out.set(-Math.sin(cam.yaw) * cp, Math.sin(cam.pitch), -Math.cos(cam.yaw) * cp);
 }
-function castFrom(dir) {
-  const hand = player.hand();
-  const h = city.raycast(cam.pos, dir, cam.dist + P.ROPE_MAX + 20);
-  if (!h) return null;
-  const d = Math.hypot(h.x - hand.x, h.y - hand.y, h.z - hand.z);
-  if (d > P.ROPE_MAX || d < 3) return null;
-  return h;
-}
-// 照準の真ん中で当たらなければ、周りを少しずつ探す (上寄り)
-const ASSIST = [];
-for (const r of [0.05, 0.1, 0.16, 0.24]) for (let a = 0; a < 8; a++) {
-  const ang = a / 8 * Math.PI * 2 + 0.3;
-  ASSIST.push([Math.cos(ang) * r, Math.sin(ang) * r * 0.8 + r * 0.4]);
-}
-function findAim() {
-  camForward(tmpD);
-  let h = castFrom(tmpD);
-  if (h) return h;
-  const maxR = isTouch ? 0.24 : 0.16;
-  const right = new THREE.Vector3(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
-  const up = new THREE.Vector3().crossVectors(right, tmpD).normalize();
-  for (const [ox, oy] of ASSIST) {
-    if (Math.hypot(ox, oy) > maxR + 0.1) continue;
-    const d = camForward(new THREE.Vector3()).addScaledVector(right, ox).addScaledVector(up, oy).normalize();
-    h = castFrom(d);
-    if (h) return h;
-  }
-  return null;
-}
+// タップ (クリック) でつかむ。つかまっているときにもう一度タップすると離す
+const REACH = 22; // ロープまでこの距離 (m) 以内ならつかめる
 function tryFire() {
   if (game.state !== 'play' || game.countdown > 0) return;
-  const h = aimHit;
-  if (h) player.fire(h);
-  else { sfx.miss(); floater('とどかない', false); }
+  if (player.rope) { player.release(); return; }
+  if (heli.reachDist(player.hand()) <= REACH) player.grab(heli.hook);
+  else { sfx.miss(); floater('ロープに届かない', false); }
 }
 
 // ---------- HUD ----------
@@ -502,57 +540,94 @@ function toast(text, gold) {
 let lastArea = '', areaTimer = 0, areaCheck = 0;
 const AREA_XY = AREAS.map(([n, la, lo]) => [n, ...ll(la, lo)]);
 
-// ミニマップ (街全体を一度だけ描いておき、回して切り出す)
-const MM_SCALE = 0.25; // px / m
-const mmBase = document.createElement('canvas');
-mmBase.width = Math.ceil((city.maxX - city.minX + 800) * MM_SCALE);
-mmBase.height = Math.ceil((city.maxZ - city.minZ + 800) * MM_SCALE);
-const MMX = city.minX - 400, MMZ = city.minZ - 400;
+// ミニマップ: 国土地理院の淡色地図 (地理院タイル) を進行方向が上になるように回して表示する
+// (清水の舞台から飛び降りるつもり techgymjp/kiyomizu と同じ作り)。地図が読めないときは PLATEAU のビルの形で描く
+const MAP_Z = 15;
+const lonToTileX = (lon, z) => (lon + 180) / 360 * 2 ** z;
+const latToTileY = (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** z; };
+const KX = 111320 * Math.cos(CITY.origin[0] * Math.PI / 180), KZ = 110574;
+const worldToGeo = (x, z) => [CITY.origin[0] - z / KZ, CITY.origin[1] + x / KX];
+const mapCanvas = document.createElement('canvas');
+let mapOrigin = { x: 0, y: 0 };
+function toMap(x, z) {
+  const [lat, lon] = worldToGeo(x, z);
+  return [lonToTileX(lon, MAP_Z) * 256 - mapOrigin.x, latToTileY(lat, MAP_Z) * 256 - mapOrigin.y];
+}
 {
-  const g = mmBase.getContext('2d');
-  g.fillStyle = '#2c3b2a';
-  g.fillRect(0, 0, mmBase.width, mmBase.height);
-  g.strokeStyle = '#d08a3a';
-  g.lineWidth = 3;
-  for (const s of city.roadSegs) {
-    g.beginPath();
-    g.moveTo((s.x1 - MMX) * MM_SCALE, (s.z1 - MMZ) * MM_SCALE);
-    g.lineTo((s.x2 - MMX) * MM_SCALE, (s.z2 - MMZ) * MM_SCALE);
-    g.stroke();
-  }
+  const [north, west] = worldToGeo(city.minX - 600, city.minZ - 600);
+  const [south, east] = worldToGeo(city.maxX + 600, city.maxZ + 600);
+  const x0 = Math.floor(lonToTileX(west, MAP_Z)), x1 = Math.floor(lonToTileX(east, MAP_Z));
+  const y0 = Math.floor(latToTileY(north, MAP_Z)), y1 = Math.floor(latToTileY(south, MAP_Z));
+  mapOrigin = { x: x0 * 256, y: y0 * 256 };
+  mapCanvas.width = (x1 - x0 + 1) * 256;
+  mapCanvas.height = (y1 - y0 + 1) * 256;
+  const g = mapCanvas.getContext('2d');
+  g.fillStyle = '#e8e4d8';
+  g.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+  // 地図が届くまでの代わり (ビルの形)
+  g.fillStyle = '#c9c4b8';
   for (const bd of city.bld) {
-    if (bd.h < 4) continue;
-    const c = Math.min(255, 110 + bd.h * 0.8);
-    g.fillStyle = `rgb(${c},${c},${Math.min(255, c + 20)})`;
+    if (!bd.plateau || bd.h < 4) continue;
     g.beginPath();
     for (let i = 0; i < bd.n; i++) {
-      const x = (bd.pts[i * 2] - MMX) * MM_SCALE, z = (bd.pts[i * 2 + 1] - MMZ) * MM_SCALE;
-      if (i) g.lineTo(x, z); else g.moveTo(x, z);
+      const [mx, my] = toMap(bd.pts[i * 2], bd.pts[i * 2 + 1]);
+      if (i) g.lineTo(mx, my); else g.moveTo(mx, my);
     }
     g.fill();
   }
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y <= y1; y++) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => g.drawImage(img, (x - x0) * 256, (y - y0) * 256);
+      img.src = `https://cyberjapandata.gsi.go.jp/xyz/pale/${MAP_Z}/${x}/${y}.png`;
+    }
+  }
 }
-const mm = $('minimap').getContext('2d');
+const mmEl = $('minimap');
+const mm = mmEl.getContext('2d');
 function drawMinimap() {
-  const W = 200, R = 100;
+  // キャンバスの解像度によらず 220px 相当の座標で描く
+  const k = mmEl.width / 220, W = 220;
+  mm.setTransform(1, 0, 0, 1, 0, 0);
+  mm.clearRect(0, 0, mmEl.width, mmEl.height);
+  mm.setTransform(k, 0, 0, k, 0, 0);
+  const [mex, mey] = toMap(player.p.x, player.p.z);
   mm.save();
-  mm.clearRect(0, 0, W, W);
-  mm.beginPath(); mm.arc(R, R, R, 0, Math.PI * 2); mm.clip();
-  mm.fillStyle = '#2c3b2a'; mm.fillRect(0, 0, W, W);
-  mm.translate(R, R);
-  mm.rotate(cam.yaw);
-  const z = 1.3; // 拡大
-  mm.scale(z, z);
-  const px = (player.p.x - MMX) * MM_SCALE, pz = (player.p.z - MMZ) * MM_SCALE;
-  mm.drawImage(mmBase, -px, -pz);
-  const dot = (x, zz, c, r) => { mm.fillStyle = c; mm.beginPath(); mm.arc((x - MMX) * MM_SCALE - px, (zz - MMZ) * MM_SCALE - pz, r, 0, Math.PI * 2); mm.fill(); };
-  if (game.mode === 'mission') rings.forEach((r, i) => { if (!r.done) dot(r.pos.x, r.pos.z, i === game.ringIdx ? '#ffc53a' : 'rgba(255,197,58,0.45)', i === game.ringIdx ? 5 : 3); });
-  else for (const k of dexTargets) if (!dex.has(k.key)) dot(k.x, k.z, '#ff5ad1', 2.5);
-  dot(tower.pos[0], tower.pos[1], '#ff4b14', 3);
+  mm.beginPath(); mm.arc(W / 2, W / 2, W / 2, 0, Math.PI * 2); mm.clip();
+  mm.translate(W / 2, W / 2);
+  mm.rotate(cam.yaw); // 進行方向 (カメラの向き) を上に
+  const zoom = isTouch ? 0.9 : 0.7, ms = 0.7 / zoom;
+  mm.scale(zoom, zoom);
+  mm.translate(-mex, -mey);
+  mm.drawImage(mapCanvas, 0, 0);
+  const mark = (x, z, r, fill) => {
+    const [px, py] = toMap(x, z);
+    mm.beginPath();
+    mm.arc(px, py, r * ms, 0, Math.PI * 2);
+    mm.fillStyle = fill;
+    mm.fill();
+    mm.lineWidth = 3 * ms;
+    mm.strokeStyle = '#fff';
+    mm.stroke();
+  };
+  if (game.mode === 'mission') {
+    for (let i = rings.length - 1; i >= game.ringIdx; i--) mark(rings[i].pos.x, rings[i].pos.z, i === game.ringIdx ? 11 : 6, i === game.ringIdx ? '#ff4b5c' : 'rgba(255,140,60,0.8)');
+  } else for (const t of dexTargets) if (!dex.has(t.key)) mark(t.x, t.z, 6, '#e040fb');
+  mark(tower.pos[0], tower.pos[1], 8, '#ff6a00');
   mm.restore();
-  // 自分 (上向きの三角)
-  mm.fillStyle = '#39ff8a';
-  mm.beginPath(); mm.moveTo(R, R - 8); mm.lineTo(R - 6, R + 6); mm.lineTo(R + 6, R + 6); mm.fill();
+  // 自分 (進行方向が上の矢印)
+  mm.save();
+  mm.translate(W / 2, W / 2);
+  mm.beginPath();
+  mm.moveTo(0, -14); mm.lineTo(10, 10); mm.lineTo(0, 5); mm.lineTo(-10, 10);
+  mm.closePath();
+  mm.fillStyle = '#1e88ff';
+  mm.fill();
+  mm.lineWidth = 2.5;
+  mm.strokeStyle = '#fff';
+  mm.stroke();
+  mm.restore();
 }
 const dexTargets = [];
 {
@@ -589,32 +664,28 @@ function handleEvents(dt) {
   const mult = () => 1 + Math.min(game.combo, 30) * 0.25;
   for (const e of player.events) {
     if (e.type === 'attach') {
+      game.ropedSince = true;
       game.combo++;
       game.maxCombo = Math.max(game.maxCombo, game.combo);
       const pts = 50 * game.combo;
       game.score += pts;
       if (game.combo >= 2) sfx.combo(game.combo);
-      const bd = e.bd;
-      if (bd && bd.name) {
-        const key = dexKey(bd.name);
-        if (!dex.has(key)) {
-          dex.add(key);
-          store.set('dex', [...dex]);
-          game.newDex++;
-          game.score += 1000;
-          sfx.collect();
-          toast(`📖 図鑑に登録！ ${bd.name}（${Math.round(bd.h)}m） ${dex.size}/${DEX_ALL.length}`, true);
-          updateDexCount();
-        } else toast(`🏢 ${bd.name}（${Math.round(bd.h)}m）`);
-      } else if (bd && bd.plateau) toast(`ビル 高さ ${Math.round(bd.h)}m`);
     } else if (e.type === 'release' && e.nice) {
       game.nice++;
       game.score += 200 * mult();
       floater('ナイスリリース！', true);
-    } else if (e.type === 'zip') {
-      // 何もしない (音だけ)
     } else if (e.type === 'land') {
-      if (e.what === 'ground') endCombo();
+      if (e.what === 'ground') { endCombo(); game.standBd = null; }
+      // ロープでほかのビルの屋上に着地できたら花火
+      if (e.what === 'roof' && e.bd && e.bd !== game.standBd && game.ropedSince) {
+        const big = !!e.bd.name || e.bd.h >= 100;
+        launchFireworks(big ? 5 : 3, big, 0.3);
+        game.landings++;
+        game.score += 500 * mult();
+        floater(e.bd.name ? `${e.bd.name} に着地！` : '着地成功！', true);
+      }
+      if (e.what === 'roof') { game.standBd = e.bd; game.ropedSince = false; }
+      if (e.what === 'roof' && e.bd) collectDex(e.bd);
       if (e.what === 'roof' || e.what === 'road') game.lastSafe = [player.p.x, player.p.y, player.p.z];
       if (e.vy > 45) { cam.shake = 0.6; floater('ドスン！', false); }
     } else if (e.type === 'bump') {
@@ -643,6 +714,23 @@ function handleEvents(dt) {
     }
   }
 }
+// 名前のあるビルの屋上に降りると図鑑に載る
+function collectDex(bd) {
+  if (!bd.name) { if (bd.plateau) toast(`ビル 高さ ${Math.round(bd.h)}m`); return; }
+  const key = dexKey(bd.name);
+  if (!dex.has(key)) {
+    dex.add(key);
+    store.set('dex', [...dex]);
+    game.newDex++;
+    game.score += 1000;
+    sfx.collect();
+    toast(`📖 図鑑に登録！ ${bd.name}（${Math.round(bd.h)}m） ${dex.size}/${DEX_ALL.length}`, true);
+    updateDexCount();
+  } else toast(`🏢 ${bd.name}（${Math.round(bd.h)}m）`);
+}
+function launchFireworks(n, big, gap) {
+  for (const t of fireworks.show(camera, n, big, gap)) sfx.firework(t);
+}
 function endCombo() {
   if (game.combo >= 3) floater(`${game.combo} コンボ！`, false);
   game.combo = 0;
@@ -661,6 +749,7 @@ function respawn() {
     p = [r.x, r.y, r.z];
   }
   player.reset(...p, cam.yaw);
+  heli.reset(player.p, cam.yaw);
   endCombo();
   floater('やり直し', false);
 }
@@ -668,17 +757,20 @@ function respawn() {
 function pause() {
   if (game.state !== 'play') return;
   game.state = 'pause';
-  ropeHeld = false;
-  player.release();
+  sfx.heli(null);
+  bgm.duck(true);
   showScreen('pause');
 }
-$('resumeBtn').onclick = () => { game.state = 'play'; showScreen(null); lockPointer(); };
+$('resumeBtn').onclick = () => { game.state = 'play'; bgm.duck(false); showScreen(null); lockPointer(); };
 $('retryBtn').onclick = () => startGame(game.mission);
 $('quitBtn').onclick = () => toTitle();
 $('resRetry').onclick = () => startGame(game.mission);
 $('resQuit').onclick = () => toTitle();
 function toTitle() {
   game.state = 'title';
+  bgm.stop();
+  sfx.heli(null);
+  fireworks.clear();
   clearRings();
   $('hud').classList.add('hidden');
   $('touch').classList.add('hidden');
@@ -721,12 +813,22 @@ $('dexBtn').onclick = () => {
 document.querySelectorAll('[data-close]').forEach((b) => { b.onclick = () => showScreen('title'); });
 document.querySelectorAll('#tod button').forEach((b) => { b.onclick = () => applyTod(b.dataset.v); });
 
+function setBgm(on) {
+  bgmOn = on;
+  store.set('bgm', on);
+  document.querySelectorAll('#bgmSel button').forEach((b) => b.classList.toggle('on', (b.dataset.v === 'on') === on));
+  if (game.state === 'play') { if (on) bgm.start(); else bgm.stop(); }
+}
+document.querySelectorAll('#bgmSel button').forEach((b) => { b.onclick = () => setBgm(b.dataset.v === 'on'); });
+setBgm(bgmOn);
+
 // ---------- ループ ----------
 const clock = new THREE.Clock();
 let menuT = 0;
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, clock.getDelta());
+  fireworks.update(dt);
   if (game.state === 'play') update(dt);
   else if (game.state === 'title') {
     // タイトルの背景: 都心の上空をゆっくり回る
@@ -737,6 +839,7 @@ function frame() {
     camera.fov = 60; camera.updateProjectionMatrix();
     player.model.visible = false;
   }
+  updateLabels();
   sky.position.copy(camera.position);
   renderer.render(scene, camera);
 }
@@ -751,8 +854,18 @@ function update(dt) {
   if (keys.KeyA || keys.ArrowLeft) mx -= 1;
   if (stick.id !== null) { mx = stick.x; mz = -stick.y; }
   input.mx = mx; input.mz = mz;
-  input.reel = keys.ShiftLeft || keys.ShiftRight || rightHeld || touchReel;
-  input.extend = keys.KeyQ || keys.ControlLeft;
+  // 空中 (飛んでいる間・ロープにつかまっている間) は、左右で向きを変えて曲がる。つかまっているとヘリも曲がる
+  if (!player.grounded && Math.abs(mx) > 0.05 && game.countdown <= 0) {
+    const turn = -mx * 1.9 * dt;
+    cam.yaw += turn;
+    if (!player.rope) {
+      const c = Math.cos(turn), sn = Math.sin(turn), v = player.v;
+      const vx = v.x * c + v.z * sn, vz = -v.x * sn + v.z * c;
+      v.x = vx; v.z = vz;
+    }
+    cam.lookIdle = 0.6; // 自動で回り込むのと取り合わない
+    input.mx = 0;
+  }
   input.yaw = cam.yaw;
 
   if (game.countdown > 0) {
@@ -766,8 +879,8 @@ function update(dt) {
   } else {
     game.t += game.mode === 'mission' ? dt : 0;
   }
+  heli.update(dt, player, cam.yaw, !!player.rope, Math.min(1, player.moveHold / 3));
   player.update(dt, input);
-  if (ropeHeld === false && player.rope) player.release();
   handleEvents(dt);
 
   // 輪
@@ -793,8 +906,17 @@ function update(dt) {
     }
   }
 
-  // カメラ
+  // カメラ: いつもプレイヤーの後ろから。動いている向きへ自動で回り込む (視点を動かした直後は少し待つ)
   const sp = player.v.length();
+  const hsp = Math.hypot(player.v.x, player.v.z);
+  cam.lookIdle += dt;
+  if (hsp > 4 && cam.lookIdle > 0.6) {
+    const ty = Math.atan2(-player.v.x, -player.v.z);
+    const dyaw = Math.atan2(Math.sin(ty - cam.yaw), Math.cos(ty - cam.yaw));
+    // 振り子の折り返しで真後ろに戻るときは追わない
+    if (Math.abs(dyaw) < 2.4 || player.grounded) cam.yaw += dyaw * Math.min(1, dt * Math.min(4, hsp / 8));
+  }
+  player.camYaw = cam.yaw;
   game.maxSpeed = Math.max(game.maxSpeed, sp);
   const target = player.p.clone(); target.y += 1.7;
   const want = 6.5 + Math.min(4, sp * 0.05);
@@ -815,18 +937,12 @@ function update(dt) {
   camera.updateProjectionMatrix();
 
   // 照準
-  aimHit = player.shot ? null : findAim();
-  $('crosshair').classList.toggle('ok', !!aimHit && !player.rope);
-  if (aimHit && !player.rope) {
-    marker.visible = true;
-    marker.position.set(aimHit.x, aimHit.y, aimHit.z).addScaledVector(new THREE.Vector3(aimHit.nx, aimHit.ny, aimHit.nz), 0.3);
-    marker.lookAt(marker.position.clone().add(new THREE.Vector3(aimHit.nx, aimHit.ny, aimHit.nz)));
-    const s = Math.max(1, cam.pos.distanceTo(marker.position) / 25);
-    marker.scale.setScalar(s);
-  } else if (player.rope) {
-    marker.visible = true;
-    marker.position.copy(player.rope.a);
-  } else marker.visible = false;
+  // つかめる位置にいたら知らせる
+  const canGrab = !player.rope && heli.reachDist(player.hand()) <= REACH;
+  $('groundTip').classList.toggle('hidden', !canGrab);
+  $('groundTip').textContent = isTouch ? 'つかめる！ ロープ ボタンをタップ' : 'つかめる！ クリック';
+  $('tRope').classList.toggle('ready', canGrab);
+  $('tRope').textContent = player.rope ? 'はなす' : 'つかむ';
 
   // 影
   const f = city.floorAt(player.p.x, player.p.z, player.p.y + 0.1);
@@ -837,6 +953,8 @@ function update(dt) {
 
   // 効果
   sfx.wind(sp);
+  sfx.heli(heli.pos.distanceTo(camera.position));
+  bgm.setEnergy(Math.min(1, sp / 70));
   const sv = Math.max(0, Math.min(1, (sp - 35) / 40));
   sl.style.opacity = sv * 0.6;
   sl.style.transform = `rotate(${Math.random() * 6}deg) scale(${1 + Math.random() * 0.05})`;
@@ -892,4 +1010,4 @@ addEventListener('resize', () => {
 showScreen('title');
 frame();
 // テスト用 (コンソールから)
-if (location.search.includes('debug')) window.dbg = { game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, hold: (v) => { ropeHeld = v; }, applyTod };
+if (location.search.includes('debug')) window.dbg = { game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, fireworks, launchFireworks, tryFire, applyTod };
