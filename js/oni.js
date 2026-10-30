@@ -139,7 +139,9 @@ export class Oni {
   heightAt(x, z) { return this.city.maxHeightNear(x, z, 40); }
 
   // homes: 持ち場の候補 [{x, z}]、count: 最初の数、safe: スタート地点からこの距離以内には置かない
-  reset(homes, count, start, safe) {
+  // ordered: homes がルートの順に並んでいる (ルートに沿って均等に置く)
+  reset(homes, count, start, safe, ordered = false) {
+    this.ordered = ordered;
     for (const o of this.list) this.scene.remove(o.obj);
     this.list = [];
     this.time = 0;
@@ -158,7 +160,7 @@ export class Oni {
     pos.x += Math.cos(a) * r;
     pos.z += Math.sin(a) * r;
     // スタート地点に近づきすぎたら持ち場に戻す
-    if (this.start && Math.hypot(pos.x - this.start.x, pos.z - this.start.z) < this.safe * 0.6) { pos.x = home.x; pos.z = home.z; }
+    if (this.start && Math.hypot(pos.x - this.start.x, pos.z - this.start.z) < this.safe * 0.85) { pos.x = home.x; pos.z = home.z; }
     pos.y = this.heightAt(pos.x, pos.z) + 25 + Math.random() * 70;
     obj.position.copy(pos);
     this.scene.add(obj);
@@ -179,6 +181,15 @@ export class Oni {
   // プレイヤーから離れた持ち場を、なるべくばらけるように選ぶ
   chooseHomes(count, from, minDist) {
     const list = this.homes.filter((h) => Math.hypot(h.x - from.x, h.z - from.z) > minDist);
+    if (this.ordered && list.length) {
+      // ルートに沿って均等に (かたまらないように)
+      const out = [];
+      for (let i = 0; i < count; i++) {
+        const f = (i + 0.2 + Math.random() * 0.6) * list.length / count;
+        out.push(list[Math.min(list.length - 1, Math.floor(f))]);
+      }
+      return out;
+    }
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [list[i], list[j]] = [list[j], list[i]];
@@ -186,6 +197,26 @@ export class Oni {
     const out = [];
     for (let i = 0; i < count && list.length; i++) out.push(list[i % list.length]);
     return out;
+  }
+  // フリー: プレイヤーのまわり (半径 R) で、ビルのある所 1km² あたり rho 匹の密度を保つ。
+  // 遠くへ離れた (追いかけていない) 鬼は消し、足りなければ進む先の外側 (0.65R〜R) に出す
+  // inner: これより近くには出さない (省略すると 0.65R。開始時は見つかる距離の外 400m から)
+  maintain(player, rho, R, builtCells, inner = R * 0.65) {
+    const px = player.p.x, pz = player.p.z;
+    for (let i = this.list.length - 1; i >= 0; i--) {
+      const o = this.list[i];
+      if (o.state !== 'chase' && Math.hypot(o.pos.x - px, o.pos.z - pz) > R * 1.3) {
+        this.scene.remove(o.obj);
+        this.list.splice(i, 1);
+      }
+    }
+    const target = Math.round(rho * builtCells(px, pz, R));
+    const ring = this.homes.filter((h) => { const d = Math.hypot(h.x - px, h.z - pz); return d > inner && d < R; });
+    let near = this.list.filter((o) => Math.hypot(o.pos.x - px, o.pos.z - pz) < R).length;
+    while (near < target && ring.length) {
+      this.spawnAt(ring[Math.floor(Math.random() * ring.length)]);
+      near++;
+    }
   }
   // 1匹増やす (プレイヤーから離れた持ち場に)
   addOne(player) {
@@ -257,6 +288,9 @@ export class Oni {
         if (d < out.nearest) out.nearest = d;
         if (d < CATCH_RADIUS) out.caught = true;
       }
+      // 遠くの鬼は描かない (数が多いステージでも重くならないように)
+      o.obj.visible = Math.hypot(o.pos.x - p.x, o.pos.z - p.z) < 1500;
+      if (!o.obj.visible) continue;
       // 見た目: ふわふわ浮いて、進む方向を向き、金棒を振る (追いかけるときは激しく)
       const chasing = o.state === 'chase';
       o.obj.position.copy(o.pos);

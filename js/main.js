@@ -3,7 +3,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { City, ll } from './city.js';
 import { Player, P } from './player.js';
 import { Sfx, Bgm } from './audio.js';
-import { MISSIONS, AREAS, FAMOUS } from './missions.js';
+import { MISSIONS, AREAS, FAMOUS, ONI_BASE_DENSITY, ONI_STEP } from './missions.js';
 import { Fireworks } from './fireworks.js';
 import { Heli } from './heli.js';
 import { Oni, CATCH_RADIUS } from './oni.js';
@@ -416,7 +416,7 @@ function startGame(m) {
   $('timer').classList.toggle('hidden', game.mode !== 'mission');
   $('nav').classList.toggle('hidden', game.mode !== 'mission');
   $('dex').classList.toggle('hidden', game.mode !== 'free');
-  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ 左クリック: ロープをつかむ／離す ・ A D: 曲がる ・ Space: ジャンプ ・ R: やり直し ・ Esc: 一時停止';
+  $('hint').textContent = isTouch ? '' : 'クリックで視点固定 ・ スペースキー: ロープをつかむ／離す ・ A D: 曲がる ・ Shift: ジャンプ ・ R: やり直し ・ Esc: 一時停止';
   lastArea = '';
   lockPointer();
 }
@@ -429,19 +429,41 @@ function setupOni(m, sp) {
     let a = new THREE.Vector3(...sp);
     for (const r of rings) {
       const L = a.distanceTo(r.pos);
-      for (let d = 0; d < L; d += 200) homes.push({ x: a.x + (r.pos.x - a.x) * d / L, z: a.z + (r.pos.z - a.z) * d / L });
+      for (let d = 0; d < L; d += 100) homes.push({ x: a.x + (r.pos.x - a.x) * d / L, z: a.z + (r.pos.z - a.z) * d / L });
       a = r.pos;
     }
-    count = m.oni || THREE.MathUtils.clamp(Math.round(routeLength(m) / 350) + 2, 4, 16);
+    // ステージが上がるごとに過密に (霞が関デビューが基準)
+    const stage = MISSIONS.indexOf(m);
+    count = m.oni || Math.round(ONI_BASE_DENSITY * (1 + ONI_STEP * stage) * routeLength(m) / 1000);
   } else {
-    for (const [, x, z] of AREA_XY) homes.push({ x, z });
-    for (const t of dexTargets) homes.push({ x: t.x, z: t.z });
-    count = 20;
+    // フリー: ビルのある所が持ち場。数は maintainOni がまわりの密度に合わせて増やす
+    for (let i = 0; i < city.bld.length; i += 12) if (city.bld[i].plateau) homes.push({ x: city.bld[i].cx, z: city.bld[i].cz });
+    count = 0;
   }
-  oni.reset(homes, count, { x: sp[0], z: sp[2] }, game.mode === 'mission' ? 520 : 650);
+  // スタート地点から離す距離: 短いルートでは短く (ただし見つかる距離 280m より外)
+  const safe = game.mode === 'mission' ? THREE.MathUtils.clamp(routeLength(m) * 0.18, 330, 520) : 650;
+  oni.reset(homes, count, { x: sp[0], z: sp[2] }, safe, game.mode === 'mission');
   game.chasers = 0; game.alarm = false; game.alarmT = 0; game.heartT = 0;
+  maintainT = 0; game.oniFirst = true;
 }
+// フリーの鬼の密度: 霞が関デビューと同じ (ルート上のどこでも、見つかる距離 280m 以内に平均約3匹)
+// → 3匹 / (π × 0.28²km²) ≒ 1km² あたり 12匹 (ビルのある所)
+const FREE_RHO = 12, FREE_R = 1200;
+const builtSet = new Set();
+for (const bd of city.bld) if (bd.plateau) builtSet.add(Math.floor(bd.cx / 100) + ',' + Math.floor(bd.cz / 100));
+// 半径 r の中で、ビルのある 100m 四方のマスの面積 (km²)
+function builtArea(x, z, r) {
+  let n = 0;
+  const gx = Math.floor(x / 100), gz = Math.floor(z / 100), k = Math.ceil(r / 100);
+  for (let i = -k; i <= k; i++) for (let j = -k; j <= k; j++) if ((i * i + j * j) * 1e4 <= r * r && builtSet.has((gx + i) + ',' + (gz + j))) n++;
+  return n * 0.01;
+}
+let maintainT = 0;
 function updateOni(dt) {
+  if (game.mode === 'free' && game.countdown <= 0) {
+    maintainT -= dt;
+    if (maintainT <= 0) { oni.maintain(player, FREE_RHO, FREE_R, builtArea, game.oniFirst ? 400 : undefined); game.oniFirst = false; maintainT = 1; }
+  }
   const r = oni.update(dt, player, game.countdown <= 0);
   if (r.spawned) floater(`鬼が ${r.spawned.length} 匹 徘徊している！`, false);
   if (r.found.length) {
@@ -483,6 +505,7 @@ function gameOver() {
   unlockPointer();
   const m = game.mission;
   $('resTitle').textContent = '鬼に捕まった！';
+  $('resNext').classList.add('hidden');
   $('resStars').textContent = '👹';
   $('resBody').innerHTML = `${m.title}<br>${game.mode === 'mission' ? `チェックポイント ${game.ringIdx} / ${rings.length} ・ ${fmt(game.t)}` : `図鑑 ${dex.size} / ${DEX_ALL.length} 棟`}<br>
     得点 <b>${Math.round(game.score).toLocaleString()}</b> pt<br>
@@ -518,6 +541,10 @@ function finishMission() {
   const prev = bests[m.id];
   const isBest = !prev || t < prev.t;
   if (isBest) bests[m.id] = { t, stars, score: game.score };
+  const idx = MISSIONS.indexOf(m);
+  const wasFree = freeUnlocked();
+  const nextWasOpen = idx + 1 < MISSIONS.length && isUnlocked(idx + 1);
+  markCleared(m.id);
   store.set('best', bests);
   $('resTitle').textContent = '配達完了！';
   $('resStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
@@ -525,6 +552,14 @@ function finishMission() {
     得点 ${Math.round(game.score).toLocaleString()} pt ／ 最大コンボ ${game.maxCombo}<br>
     最高速度 ${Math.round(game.maxSpeed * 3.6)} km/h ／ ナイスリリース ${game.nice} 回 ／ 着地成功 ${game.landings} 回<br>
     <small>★★★ ${fmt(L / 34)} ／ ★★ ${fmt(L / 24)}</small>`;
+  // 鍵が開いたお知らせと「次のステージへ」
+  const next = MISSIONS[idx + 1];
+  let unlockMsg = '';
+  if (next && !nextWasOpen) unlockMsg += `<div class="unlock">🔓 「${next.title}」の鍵が開いた！</div>`;
+  if (!wasFree && freeUnlocked()) unlockMsg += `<div class="unlock">🔓 全ステージクリア！「ビル図鑑あつめ」の鍵が開いた！</div>`;
+  $('resBody').innerHTML += unlockMsg;
+  $('resNext').classList.toggle('hidden', !next);
+  if (next) { $('resNext').innerHTML = `<b>次のステージへ ▶ ${next.title}</b>`; $('resNext').onclick = () => startGame(next); }
   showScreen('result');
   $('hud').classList.add('hidden');
   $('touch').classList.add('hidden');
@@ -544,7 +579,9 @@ addEventListener('keydown', (e) => {
   if (e.repeat) return;
   keys[e.code] = true;
   if (game.state !== 'play') return;
-  if (e.code === 'Space') { e.preventDefault(); player.jump(); }
+  // スペース: ロープをつかむ／離す。Shift: ジャンプ
+  if (e.code === 'Space') { e.preventDefault(); sfx.resume(); tryFire(); }
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') player.jump();
   if (e.code === 'KeyR') respawn();
   if (e.code === 'KeyM') sfx.setMuted(!sfx.muted);
   if (e.code === 'KeyB') setBgm(!bgmOn);
@@ -967,7 +1004,6 @@ function collectDex(bd) {
     game.score += 1000;
     sfx.collect();
     toast(`📖 図鑑に登録！ ${bd.name}（${Math.round(bd.h)}m） ${dex.size}/${DEX_ALL.length}`, true);
-    if (game.mode === 'free' && oni.list.length < 40) oni.addOne(player);
     updateDexCount();
   } else toast(`🏢 ${bd.name}（${Math.round(bd.h)}m）`);
 }
@@ -1025,23 +1061,43 @@ function toTitle() {
   unlockPointer();
 }
 
+// ---------- ステージの鍵 ----------
+// 首都高グランプリと同じく、最初は1番目のステージだけ。クリアすると次のステージの鍵が開く。
+// フリー (ビル図鑑あつめ) は全部のステージをクリアすると開く。テスト用に ?unlock で全部開く
+const UNLOCK_ALL = location.search.includes('unlock');
+function isCleared(id) { return store.get('cleared', []).includes(id) || !!store.get('best', {})[id]; }
+function markCleared(id) {
+  const c = store.get('cleared', []);
+  if (!c.includes(id)) { c.push(id); store.set('cleared', c); }
+}
+function isUnlocked(i) { return UNLOCK_ALL || i === 0 || isCleared(MISSIONS[i - 1].id); }
+function freeUnlocked() { return UNLOCK_ALL || MISSIONS.every((m) => isCleared(m.id)); }
+
 // ---------- メニュー ----------
 function buildMenu() {
   const bests = store.get('best', {});
   const list = $('missionList');
   list.innerHTML = '';
-  for (const m of MISSIONS) {
+  MISSIONS.forEach((m, i) => {
     const b = document.createElement('button');
-    b.className = 'mode';
+    const open = isUnlocked(i);
+    b.className = 'mode' + (open ? '' : ' locked');
     const best = bests[m.id];
-    b.innerHTML = `${best ? `<span class="best">${'★'.repeat(best.stars)} ${fmt(best.t)}</span>` : ''}<b>${m.title}</b><span>${m.sub}</span>`;
-    b.onclick = () => startGame(m);
+    b.innerHTML = open
+      ? `${best ? `<span class="best">${'★'.repeat(best.stars)} ${fmt(best.t)}</span>` : ''}<b>${i + 1}. ${m.title}</b><span>${m.sub}</span>`
+      : `<b>🔒 ${i + 1}. ${m.title}</b><span>「${MISSIONS[i - 1].title}」をクリアすると開きます</span>`;
+    b.onclick = () => { if (open) startGame(m); else { sfx.resume(); sfx.miss(); } };
     list.appendChild(b);
-  }
+  });
+  const fo = freeUnlocked();
+  $('freeBtn').classList.toggle('locked', !fo);
+  $('freeBtn').innerHTML = fo
+    ? `<b>ビル図鑑あつめ</b><span>霞が関ビルの屋上から自由に飛び回る。名前のあるビルの屋上に降りると図鑑に載る（<em id="dexCount">0</em>）</span>`
+    : `<b>🔒 ビル図鑑あつめ</b><span>配達ミッションを全部クリアすると開きます（図鑑 <em id="dexCount">0</em>）</span>`;
   updateDexCount();
 }
 buildMenu();
-$('freeBtn').onclick = () => startGame(FREE);
+$('freeBtn').onclick = () => { if (freeUnlocked()) startGame(FREE); else { sfx.resume(); sfx.miss(); } };
 $('howBtn').onclick = () => showScreen('how');
 $('dexBtn').onclick = () => {
   $('dexTotal').textContent = `${dex.size} / ${DEX_ALL.length} 棟`;
@@ -1200,7 +1256,7 @@ function update(dt) {
   // つかめる位置にいたら知らせる
   const canGrab = !player.rope && heli.reachDist(player.hand()) <= REACH;
   $('groundTip').classList.toggle('hidden', !canGrab);
-  $('groundTip').textContent = isTouch ? 'つかめる！ ロープ ボタンをタップ' : 'つかめる！ クリック';
+  $('groundTip').textContent = isTouch ? 'つかめる！ ロープ ボタンをタップ' : 'つかめる！ スペースキー';
   $('tRope').classList.toggle('ready', canGrab);
   $('tRope').textContent = player.rope ? 'はなす' : 'つかむ';
 

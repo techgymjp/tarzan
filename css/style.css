@@ -104,6 +104,9 @@ button.mode { display: block; width: 100%; text-align: left; background: rgba(25
 button.mode:hover { background: rgba(255,176,32,0.2); border-color: var(--accent); }
 button.mode b { display: block; font-size: 16px; }
 button.mode span { font-size: 13px; opacity: 0.8; }
+button.mode.locked { opacity: 0.5; cursor: not-allowed; }
+button.mode.locked:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.15); }
+.unlock { margin-top: 10px; padding: 8px; border-radius: 10px; background: linear-gradient(90deg, #b8860b, #ffcf3f); color: #221600; font-weight: 900; }
 button.mode .best { float: right; color: var(--accent); font-size: 13px; }
 button.primary { display: block; width: 100%; margin: 14px 0 6px; padding: 12px; border: 0; border-radius: 12px;
   background: linear-gradient(90deg, #ffcf3f, #ff8a2b); color: #221600; font-weight: 900; font-size: 18px; cursor: pointer; }

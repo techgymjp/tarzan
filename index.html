@@ -79,15 +79,15 @@
     <h2>あそびかた</h2>
     <table class="keys">
       <tr><th>視点</th><td>マウス（画面をクリックで固定）</td><td>右半分をドラッグ</td></tr>
-      <tr><th>ロープ</th><td>クリックでつかむ／もう一度クリックで離す</td><td>つかむ ボタン（もう一度で離す）</td></tr>
-      <tr><th>ジャンプ</th><td>Space</td><td>ジャンプ</td></tr>
+      <tr><th>ロープ</th><td>スペースキーでつかむ／もう一度で離す（左クリックでも可）</td><td>つかむ ボタン（もう一度で離す）</td></tr>
+      <tr><th>ジャンプ</th><td>Shift</td><td>ジャンプ</td></tr>
       <tr><th>移動・こぐ</th><td>W A S D</td><td>左のスティック</td></tr>
       <tr><th>やり直し</th><td>R</td><td>—</td></tr>
       <tr><th>一時停止／消音／BGM</th><td>Esc ／ M ／ B</td><td>❚❚</td></tr>
       <tr><th>地図を大きく</th><td>N（またはミニマップをクリック）</td><td>ミニマップをタップ</td></tr>
     </table>
     <ul class="tips">
-      <li>ロープはすぐ前を飛ぶ <b>ヘリコプター</b> から垂れている。「つかめる！」と出たらタップ（クリック）でつかまって前へ運ばれ、もう一度タップで離して飛んでいく。左右で曲がれる</li>
+      <li>ロープはすぐ前を飛ぶ <b>ヘリコプター</b> から垂れている。「つかめる！」と出たらスペースキー（スマホは「つかむ」ボタン）でつかまって前へ運ばれ、もう一度タップで離して飛んでいく。左右で曲がれる</li>
       <li>振り子の<b>いちばん下を過ぎて上がり始めたところ</b>で手を離すと「ナイスリリース！」で加速</li>
       <li>地面に足を着けずにロープにつかまるほど <b>コンボ</b> が増えて得点が上がる。屋上や首都高の高架の上なら1秒までは着地してもコンボが続く</li>
       <li>速いまま壁すれすれを抜けると「ニアミス」ボーナス。ぶつかると減速する</li>
@@ -124,7 +124,8 @@
     <h2 id="resTitle">配達完了！</h2>
     <div id="resStars"></div>
     <div id="resBody"></div>
-    <button class="primary" id="resRetry">もう一度</button>
+    <button class="primary" id="resNext"><b>次のステージへ</b></button>
+    <button class="mode" id="resRetry"><b>もう一度</b></button>
     <button class="mode" id="resQuit"><b>タイトルへ</b></button>
   </div>
 </div>
