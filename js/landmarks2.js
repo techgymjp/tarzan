@@ -1034,3 +1034,120 @@ export function addOdaiba(scene, city) {
   scene.add(g);
   return { rainbow: at(0.5), fujitv: [FX, FZ], liberty: [SX, SZ] };
 }
+
+// ---------- 銀座・日本橋・築地: 和光の時計塔・銀座四丁目交差点・歌舞伎座・GINZA SIX・日本橋・三越本店・三井本館・日本銀行本店・築地本願寺 ----------
+export function addGinzaNihonbashi(scene, city) {
+  const g = new THREE.Group();
+  const stone = M(0xd6cdb8), roofM = M(0x34383c);
+  // 銀座の碁盤の目の向き (中央通りは京橋から新橋へ南西に下る)
+  const [k0x, k0z] = ll(35.67700, 139.77000), [k1x, k1z] = ll(35.66650, 139.75900);
+  const grid = Math.atan2(k1x - k0x, k1z - k0z);
+  // 銀座 和光: 交差点に面した丸い角と、てっぺんの時計塔
+  const [WX, WZ] = ll(35.67190, 139.76505);
+  const wako = new THREE.Group();
+  wako.position.set(WX, 0, WZ);
+  wako.rotation.y = grid;
+  mesh(new THREE.BoxGeometry(30, 32, 30), stone, -3, 16, -3, wako);
+  mesh(new THREE.CylinderGeometry(15, 15, 32, 24, 1, false, 0, Math.PI / 2), stone, 0, 16, 0, wako); // 交差点側の丸い角
+  mesh(new THREE.CylinderGeometry(5, 5.5, 9, 16), stone, 4, 36.5, 4, wako);
+  const clock = canvasTex(128, 128, (c, w, h) => {
+    c.fillStyle = '#f6f2e4'; c.beginPath(); c.arc(64, 64, 60, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#2a2e33'; c.lineWidth = 5;
+    for (let i = 0; i < 12; i++) { const a = i / 6 * Math.PI; c.beginPath(); c.moveTo(64 + Math.cos(a) * 46, 64 + Math.sin(a) * 46); c.lineTo(64 + Math.cos(a) * 56, 64 + Math.sin(a) * 56); c.stroke(); }
+    c.lineWidth = 6; c.beginPath(); c.moveTo(64, 64); c.lineTo(64, 24); c.moveTo(64, 64); c.lineTo(90, 76); c.stroke();
+  });
+  const cm = new THREE.MeshBasicMaterial({ map: clock, transparent: true });
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    const f = mesh(new THREE.CircleGeometry(3, 24), cm, 4 + Math.sin(a) * 5.6, 37, 4 + Math.cos(a) * 5.6, wako);
+    f.rotation.y = a;
+  }
+  const dome = mesh(new THREE.SphereGeometry(5.2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0x5f6e63), 4, 41, 4, wako);
+  dome.scale.y = 0.7;
+  g.add(wako);
+  city.addBox(WX, WZ, 34, 34, 0, 32, '銀座 和光').roof = true;
+  // 銀座四丁目交差点: 4本の横断歩道
+  const [CX, CZ] = ll(35.67170, 139.76540);
+  const zebra = canvasTex(512, 512, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = '#f4f4f0';
+    const band = (x0, y0, x1, y1) => { const n = 9; for (let i = 0; i < n; i++) { const t = i / n; if (x0 === x1) c.fillRect(x0 - 40, y0 + (y1 - y0) * t, 80, (y1 - y0) / n * 0.55); else c.fillRect(x0 + (x1 - x0) * t, y0 - 40, (x1 - x0) / n * 0.55, 80); } };
+    band(130, 30, 130, 482); band(382, 30, 382, 482); band(30, 130, 482, 130); band(30, 382, 482, 382);
+  });
+  const zm = mesh(new THREE.PlaneGeometry(56, 56), new THREE.MeshBasicMaterial({ map: zebra, transparent: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }), CX, 0.1, CZ, g);
+  zm.rotation.x = -Math.PI / 2;
+  zm.rotation.z = grid;
+  // 歌舞伎座: 白い壁に瓦屋根と唐破風 (後ろの歌舞伎座タワーは PLATEAU のまま)
+  const [KX, KZ] = ll(35.66945, 139.76790);
+  hallBuilding(g, city, KX, KZ, grid, 0, 0, 50, 34, 12, 8, M(0xf0ebe0), roofM, '歌舞伎座');
+  hallBuilding(g, city, KX, KZ, grid, 0, 20, 18, 8, 9, 5, M(0xf0ebe0), roofM, '歌舞伎座');
+  const gf = mesh(new THREE.TorusGeometry(6, 0.8, 6, 16, Math.PI), M(0xc8352a), KX + Math.sin(grid) * 24.5, 10.5, KZ + Math.cos(grid) * 24.5, g);
+  gf.rotation.y = grid;
+  // GINZA SIX: 大きなガラスの箱に、のれんのような横の帯
+  const [SX, SZ] = ll(35.66960, 139.76400);
+  const six = new THREE.Group();
+  six.position.set(SX, 0, SZ);
+  six.rotation.y = grid;
+  mesh(new THREE.BoxGeometry(100, 56, 80), M(0x56677a), 0, 28, 0, six);
+  for (let y = 6; y < 56; y += 7) mesh(new THREE.BoxGeometry(101, 1.2, 81), M(0xe8e4dc), 0, y, 0, six);
+  g.add(six);
+  city.addPrism(rectPts(SX, SZ, grid, 0, 0, 100, 80), 0, 56, 'GINZA SIX').roof = true;
+  // 日本橋: 石の二重アーチの橋と、まん中の麒麟の像の街灯 (真上は首都高)
+  const [n0x, n0z] = ll(35.68370, 139.77408), [n1x, n1z] = ll(35.68430, 139.77432);
+  const nrot = Math.atan2(n1x - n0x, n1z - n0z), nl = Math.hypot(n1x - n0x, n1z - n0z) + 20;
+  const ncx = (n0x + n1x) / 2, ncz = (n0z + n1z) / 2;
+  const granite = M(0xb8b2a6), bronze = M(0x4f5a4a);
+  const deck = mesh(new THREE.BoxGeometry(27, 1.2, nl), granite, ncx, -0.1, ncz, g);
+  deck.rotation.y = nrot;
+  city.addPrism(rectPts(ncx, ncz, nrot, 0, 0, 27, nl), -1.2, 0.5, '日本橋').roof = true;
+  const ncs = Math.cos(nrot), nsn = Math.sin(nrot);
+  for (const sd of [-1, 1]) {
+    const rail = mesh(new THREE.BoxGeometry(0.8, 1.3, nl), granite, ncx + ncs * 13.2 * sd, 1.1, ncz - nsn * 13.2 * sd, g);
+    rail.rotation.y = nrot;
+    for (const t of [-0.25, 0.25]) {
+      const arch = mesh(new THREE.TorusGeometry(nl / 4.4, 0.9, 6, 20, Math.PI), granite, ncx + Math.sin(nrot) * nl * t + ncs * 13.3 * sd, -2.4, ncz + Math.cos(nrot) * nl * t - nsn * 13.3 * sd, g);
+      arch.rotation.y = nrot - Math.PI / 2;
+      arch.scale.y = 2.4 / (nl / 4.4);
+    }
+    // 麒麟の像と街灯
+    const px = ncx + ncs * 13.2 * sd, pz = ncz - nsn * 13.2 * sd;
+    mesh(new THREE.BoxGeometry(2, 3, 2), granite, px, 1.5, pz, g);
+    mesh(new THREE.BoxGeometry(1.2, 1.4, 2.2), bronze, px, 3.7, pz, g);
+    mesh(new THREE.CylinderGeometry(0.2, 0.25, 5, 8), bronze, px, 6.5, pz, g);
+    for (const a of [0, 2.1, 4.2]) mesh(new THREE.SphereGeometry(0.45, 8, 6), M(0xfff1c0, { emissive: 0x806030 }), px + Math.cos(a) * 0.8, 9, pz + Math.sin(a) * 0.8, g);
+  }
+  // 日本橋三越本店: 石造りの百貨店
+  const [MX, MZ] = ll(35.68560, 139.77340);
+  mesh(new THREE.BoxGeometry(80, 34, 60), M(0xe0d6c0), MX, 17, MZ, g);
+  mesh(new THREE.BoxGeometry(82, 1.5, 62), M(0xc8bea8), MX, 30, MZ, g);
+  city.addBox(MX, MZ, 80, 60, 0, 34, '日本橋三越本店').roof = true;
+  // 三井本館: 石の列柱
+  const [IX, IZ] = ll(35.68650, 139.77260);
+  mesh(new THREE.BoxGeometry(60, 31, 44), M(0xd8d0bc), IX, 15.5, IZ, g);
+  for (let i = 0; i < 10; i++) mesh(new THREE.CylinderGeometry(1, 1, 22, 12), M(0xe8e2d2), IX - 27 + i * 6, 13, IZ + 23, g);
+  city.addBox(IX, IZ, 60, 46, 0, 31, '三井本館').roof = true;
+  // 日本銀行本店: 石造りに緑のドーム
+  const [BX, BZ] = ll(35.68610, 139.77080);
+  mesh(new THREE.BoxGeometry(64, 20, 54), M(0xcfc6b0), BX, 10, BZ, g);
+  mesh(new THREE.CylinderGeometry(7, 7, 4, 16), M(0xcfc6b0), BX, 22, BZ, g);
+  mesh(new THREE.SphereGeometry(7, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0x5f8f78), BX, 24, BZ, g);
+  city.addBox(BX, BZ, 64, 54, 0, 20, '日本銀行本店').roof = true;
+  // 築地本願寺: インド風の石造りの本堂 (まん中の丸屋根と両わきの塔)
+  const [TX, TZ] = ll(35.66630, 139.77230);
+  const hon = new THREE.Group();
+  hon.position.set(TX, 0, TZ);
+  hon.rotation.y = grid;
+  const tsone = M(0xd8cfb8);
+  mesh(new THREE.BoxGeometry(56, 16, 40), tsone, 0, 8, 0, hon);
+  const cdome = mesh(new THREE.SphereGeometry(10, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), tsone, 0, 16, 6, hon);
+  cdome.scale.y = 1.3;
+  mesh(new THREE.ConeGeometry(1, 4, 8), M(0xb8a060), 0, 31, 6, hon);
+  for (const sx of [-1, 1]) {
+    mesh(new THREE.CylinderGeometry(4, 4, 22, 12), tsone, sx * 24, 11, 14, hon);
+    mesh(new THREE.SphereGeometry(4.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), tsone, sx * 24, 22, 14, hon);
+  }
+  g.add(hon);
+  city.addPrism(rectPts(TX, TZ, grid, 0, 0, 56, 40), 0, 16, '築地本願寺').roof = true;
+  scene.add(g);
+  return { wako: [WX, WZ], crossing: [CX, CZ], kabukiza: [KX, KZ], six: [SX, SZ], nihonbashi: [ncx, ncz], mitsukoshi: [MX, MZ], mitsui: [IX, IZ], boj: [BX, BZ], hongwanji: [TX, TZ] };
+}
