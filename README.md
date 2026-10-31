@@ -151,7 +151,26 @@ python3 tools/build_city.py ../shutoko/js > js/city-data.js
 
 ## 公開
 
-`.github/workflows/pages.yml` で、`main`（または今のデフォルトブランチ `claude/relaxed-hamilton-sujag7`）に push すると GitHub Pages に公開します（リポジトリの Settings → Pages → Source を「GitHub Actions」にしておく）。
+`.github/workflows/pages.yml` で、`main` に push すると GitHub Pages に公開します（リポジトリの Settings → Pages → Source を「GitHub Actions」にしておく）。
+
+## Android アプリ
+
+Capacitor 8 で Android アプリにしています（パッケージ名 `jp.techgym.tarzan`）。ゲームのファイルはアプリに同梱するので、オフラインでも遊べます（ミニマップの地図だけは通信が必要）。
+
+- 動作確認用 APK（デバッグ署名・テスト広告）: リリース画面 https://github.com/techgymjp/tarzan/releases/tag/android-latest
+- APK 直接: https://github.com/techgymjp/tarzan/releases/latest/download/tarzan.apk
+
+![APK のリリース画面の QR コード](docs/apk-qr.png)
+
+- ビルドは GitHub Actions（`.github/workflows/android.yml`）。`npm ci` → `npm run build`（`scripts/build-web.js` が `www/` に Web ファイルをコピーし、`ads-config.js`・`build-info.js` を作る）→ `npx cap sync android` → `./gradlew assembleDebug`。`main` のビルドは Release `android-latest` の APK を差し替える
+- GitHub Secrets（`ANDROID_KEYSTORE_BASE64` など4つ）があれば、本番広告（`ADMOB_MODE=production`）で署名付き AAB も作り、Artifact `tarzan-release-aab` に上げる
+- 広告（`js/ads.js`、Google AdMob）: バナーはトップ・あそびかた・ポーズ・結果画面の下中央だけ。全画面広告は、プレイを始める・トップに戻る・ポーズからの再開・結果からもう一度／次のステージのたびに出す。リワード広告は、鬼に捕まったときに「広告を見て続ける」（最後に立っていた屋上から再開し、近くの鬼を追い払う。1ゲーム3回まで。使った回数は結果とシェア文に出る）。本番の広告ユニット ID が空の種類は本番ビルドで出さない
+- 戻るボタン: プレイ中はポーズ（ポーズ中なら再開）、トップ・結果画面ではアプリを閉じる。別のアプリに切り替えたら自動でポーズし、音も止める
+- アイコン・起動画面: `assets/` の画像から `npx @capacitor/assets generate --android` で作る
+
+## ライセンス
+
+ソースコード・画像などの著作権はテックジム株式会社に帰属します（All rights reserved）。許可なく複製・改変・再配布すること、Web サイトやアプリとして公開・販売することを禁止します。テックジムの受講生が学習目的で複製・改変することは許可します（アプリストアでの公開・広告の掲載・販売などの商用利用は不可）。詳しくは `LICENSE` を見てください。three.js（MIT）と、PLATEAU・OpenStreetMap・国土地理院のデータは、それぞれのライセンス・利用規約に従います。
 
 ## クレジット
 

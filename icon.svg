@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1f3a8a"/><stop offset="0.55" stop-color="#5b5fc7"/><stop offset="1" stop-color="#ffa66b"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <circle cx="780" cy="300" r="70" fill="#ffd9a0" opacity="0.9"/>
+  <g>
+    <rect x="0" y="700" width="120" height="324" fill="#3ec1c9"/>
+    <rect x="110" y="620" width="110" height="404" fill="#ff6f91"/>
+    <rect x="215" y="760" width="90" height="264" fill="#ffc94a"/>
+    <rect x="300" y="560" width="120" height="464" fill="#4f7cff"/>
+    <rect x="415" y="690" width="100" height="334" fill="#8be08b"/>
+    <rect x="600" y="640" width="110" height="384" fill="#b58bff"/>
+    <rect x="705" y="740" width="90" height="284" fill="#ff8a4a"/>
+    <rect x="900" y="660" width="124" height="364" fill="#42d6a4"/>
+    <g fill="#e8422e"><polygon points="840,420 862,420 900,1024 802,1024"/></g>
+    <g fill="#fff" opacity="0.85"><rect x="820" y="610" width="62" height="16"/><rect x="812" y="760" width="78" height="14"/></g>
+  </g>
+  <g fill="#ffffff" opacity="0.35">
+    <rect x="10" y="720" width="14" height="18"/><rect x="107" y="773" width="14" height="18"/><rect x="204" y="826" width="14" height="18"/><rect x="301" y="879" width="14" height="18"/><rect x="398" y="932" width="14" height="18"/><rect x="495" y="725" width="14" height="18"/><rect x="592" y="778" width="14" height="18"/><rect x="689" y="831" width="14" height="18"/><rect x="786" y="884" width="14" height="18"/><rect x="883" y="937" width="14" height="18"/><rect x="980" y="730" width="14" height="18"/><rect x="77" y="783" width="14" height="18"/><rect x="174" y="836" width="14" height="18"/><rect x="271" y="889" width="14" height="18"/><rect x="368" y="942" width="14" height="18"/><rect x="465" y="735" width="14" height="18"/><rect x="562" y="788" width="14" height="18"/><rect x="659" y="841" width="14" height="18"/><rect x="756" y="894" width="14" height="18"/><rect x="853" y="947" width="14" height="18"/><rect x="950" y="740" width="14" height="18"/><rect x="47" y="793" width="14" height="18"/><rect x="144" y="846" width="14" height="18"/><rect x="241" y="899" width="14" height="18"/><rect x="338" y="952" width="14" height="18"/><rect x="435" y="745" width="14" height="18"/><rect x="532" y="798" width="14" height="18"/><rect x="629" y="851" width="14" height="18"/><rect x="726" y="904" width="14" height="18"/><rect x="823" y="957" width="14" height="18"/><rect x="920" y="750" width="14" height="18"/><rect x="17" y="803" width="14" height="18"/><rect x="114" y="856" width="14" height="18"/><rect x="211" y="909" width="14" height="18"/><rect x="308" y="962" width="14" height="18"/><rect x="405" y="755" width="14" height="18"/><rect x="502" y="808" width="14" height="18"/><rect x="599" y="861" width="14" height="18"/><rect x="696" y="914" width="14" height="18"/><rect x="793" y="967" width="14" height="18"/>
+  </g>
+  <g>
+    <!-- ヘリ -->
+    <g transform="translate(330,190)">
+      <ellipse cx="0" cy="0" rx="62" ry="30" fill="#ffffff"/>
+      <rect x="40" y="-8" width="90" height="12" rx="6" fill="#ffffff"/>
+      <rect x="-90" y="-44" width="180" height="8" rx="4" fill="#20263a"/>
+      <rect x="-4" y="-40" width="8" height="14" fill="#20263a"/>
+      <ellipse cx="-22" cy="-4" rx="24" ry="14" fill="#7fd3ff"/>
+    </g>
+    <!-- ロープ -->
+    <path d="M330 220 Q 420 420 560 560" stroke="#3a2a1a" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <!-- ターザン -->
+    <g transform="translate(560,560) rotate(-35)">
+      <circle cx="0" cy="18" r="34" fill="#ffcf9e"/>
+      <rect x="-30" y="48" width="60" height="96" rx="24" fill="#ff8a1e"/>
+      <rect x="-26" y="130" width="22" height="80" rx="11" fill="#2b3a67" transform="rotate(14 -15 130)"/>
+      <rect x="4" y="130" width="22" height="80" rx="11" fill="#2b3a67" transform="rotate(-24 15 130)"/>
+      <rect x="18" y="-50" width="20" height="110" rx="10" fill="#ffcf9e" transform="rotate(-12 28 55)"/>
+      <rect x="-50" y="60" width="20" height="80" rx="10" fill="#ffcf9e" transform="rotate(40 -40 60)"/>
+    </g>
+  </g></svg>

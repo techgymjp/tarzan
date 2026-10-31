@@ -23,6 +23,12 @@ const ms = (m) => (LANG === 'en' && m.en ? m.en.sub : m.sub);
 const SHARE_URL = 'https://techgym.jp/column/claude-code-game-tarzan/';
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 if (isTouch) document.body.classList.add('touch');
+// Android アプリ (Capacitor) で動いているか。Web 版では Capacitor がないので何もしない
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const plugin = (name) => (NATIVE && window.Capacitor.Plugins ? window.Capacitor.Plugins[name] : null);
+const Ads = window.Ads || { available: false, canReward: false, showing: false, privacyOptionsRequired: false, initDone: Promise.resolve(),
+  showInterstitial: async () => {}, showRewarded: async () => 'unavailable', setBanner: () => {}, showPrivacyOptions: async () => {} };
+if (NATIVE) document.body.classList.add('app');
 const store = {
   get(k, d) { try { const v = localStorage.getItem('tarzan.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('tarzan.' + k, JSON.stringify(v)); } catch (e) { /* 保存できなくても遊べる */ } },
@@ -134,6 +140,11 @@ const fuji = addFuji(scene);
 const distant = addDistant(scene);
 const sfx = new Sfx();
 const bgm = new Bgm(sfx);
+// 広告の表示中や別のアプリに切り替えたときは音を止める (js/ads.js からも呼ぶ)
+window.GameAudio = {
+  suspend() { if (sfx.ctx && sfx.ctx.state === 'running') sfx.ctx.suspend(); },
+  resume() { if (sfx.ctx && sfx.ctx.state === 'suspended') sfx.ctx.resume(); },
+};
 let bgmOn = store.get('bgm', true);
 const player = new Player(scene, city, sfx);
 const fireworks = new Fireworks(scene);
@@ -663,7 +674,7 @@ function startGame(m) {
   game.mission = m;
   game.mode = m === FREE ? 'free' : 'mission';
   game.t = 0; game.ringIdx = 0; game.score = 0; game.combo = 0; game.maxCombo = 0; game.groundT = 0;
-  game.maxSpeed = 0; game.nice = 0; game.newDex = 0; game.landings = 0; game.ropedSince = false;
+  game.maxSpeed = 0; game.nice = 0; game.newDex = 0; game.landings = 0; game.ropedSince = false; game.revives = 0;
   fireworks.clear();
   if (bgmOn) bgm.start();
   const sp = startPoint(m);
@@ -794,19 +805,107 @@ function gameOver() {
   $('resStars').textContent = '👹';
   $('resBody').innerHTML = `${mt(m)}<br>${game.mode === 'mission' ? t('resCaughtMission', { i: game.ringIdx, n: rings.length, t: fmt(game.t) }) : t('resCaughtFree', { n: dex.size, total: DEX_ALL.length })}<br>
     ${t('resScore', { s: score })}<br>
-    ${t('resCaughtStats', { c: game.maxCombo, l: game.landings, v: Math.round(game.maxSpeed * 3.6) })}`;
-  setTimeout(() => {
-    if (game.state !== 'result') return;
-    showScreen('result');
-    $('hud').classList.add('hidden');
-    $('touch').classList.add('hidden');
-    $('danger').style.opacity = 0;
-    buildMenu();
-  }, 1200);
+    ${t('resCaughtStats', { c: game.maxCombo, l: game.landings, v: Math.round(game.maxSpeed * 3.6) })}${game.revives ? `<br>${t('revivedN', { n: game.revives })}` : ''}`;
+  if (game.revives) game.shareText += t('revivedShare', { n: game.revives });
+  // アプリ版: 捕まった様子を見届けてから「広告を見て続ける」を出す (1ゲーム REVIVE_MAX 回まで)
+  if (Ads.canReward && game.revives < REVIVE_MAX) {
+    setTimeout(() => { if (game.state === 'result') offerRevive(); }, REVIVE_DELAY * 1000);
+    return;
+  }
+  setTimeout(showCaughtResult, 1200);
+}
+function showCaughtResult() {
+  if (game.state !== 'result') return;
+  showScreen('result');
+  $('hud').classList.add('hidden');
+  $('touch').classList.add('hidden');
+  $('danger').style.opacity = 0;
+  buildMenu();
+}
+
+// ---------- リワード広告のチート: 鬼に捕まったら、広告を見てその場から続ける (アプリだけ・1ゲーム 3 回まで) ----------
+// 見終わると、最後に立っていた屋上 (ミッションなら最後に取ったチェックポイント) から再開し、近くの鬼は遠くへ追い払う
+const REVIVE_MAX = 3, REVIVE_DELAY = 2.5, REVIVE_WAIT = 6;
+const revive = { active: false, busy: false, timer: 0 };
+function offerRevive() {
+  Object.assign(revive, { active: true, busy: false });
+  $('reviveWatch').disabled = false;
+  $('reviveWatch').textContent = t('reviveWatch');
+  $('reviveNote').textContent = t('reviveNote', { n: REVIVE_MAX - game.revives, max: REVIVE_MAX });
+  $('revive').classList.remove('hidden');
+  let left = REVIVE_WAIT;
+  const tick = () => {
+    if (!revive.active || revive.busy) return;
+    $('reviveSkip').textContent = t('reviveSkip', { s: left });
+    if (left-- <= 0) { closeRevive(); showCaughtResult(); return; }
+    revive.timer = setTimeout(tick, 1000);
+  };
+  tick();
+}
+function closeRevive() {
+  revive.active = false;
+  clearTimeout(revive.timer);
+  $('revive').classList.add('hidden');
+}
+$('reviveSkip').onclick = () => { if (!revive.active) return; closeRevive(); showCaughtResult(); };
+$('reviveWatch').onclick = async () => {
+  if (!revive.active || revive.busy) return;
+  revive.busy = true;
+  clearTimeout(revive.timer);
+  $('reviveWatch').disabled = true;
+  $('reviveWatch').textContent = t('reviveLoading');
+  const result = await Ads.showRewarded();
+  if (result === 'unavailable') {
+    $('reviveNote').textContent = t('reviveFail');
+    setTimeout(() => { closeRevive(); showCaughtResult(); }, 2000);
+    return;
+  }
+  closeRevive();
+  if (result !== 'rewarded') { showCaughtResult(); return; }
+  reviveGame();
+};
+function reviveGame() {
+  game.revives++;
+  respawn();
+  // 近くの鬼は、プレイヤーから 700m 離れた所へ追い払う
+  for (const o of oni.list) {
+    const dx = o.pos.x - player.p.x, dz = o.pos.z - player.p.z, d = Math.hypot(dx, dz) || 1;
+    if (d < 700) {
+      o.pos.x = player.p.x + dx / d * 700;
+      o.pos.z = player.p.z + dz / d * 700;
+      o.pos.y = oni.heightAt(o.pos.x, o.pos.z) + 60;
+    }
+    o.state = 'wander';
+    if (o.waypoint) o.waypoint.copy(o.pos);
+  }
+  game.state = 'play';
+  showScreen(null);
+  $('hud').classList.remove('hidden');
+  $('touch').classList.toggle('hidden', !isTouch);
+  if (bgmOn) bgm.start();
+  floater(t('revived'), true);
+  lockPointer();
 }
 
 function showScreen(id) {
-  for (const s of ['title', 'how', 'dexScreen', 'pause', 'result', 'loading']) $(s).classList.toggle('hidden', s !== id);
+  for (const s of ['title', 'stages', 'how', 'dexScreen', 'pause', 'result', 'loading']) $(s).classList.toggle('hidden', s !== id);
+  currentScreen = id;
+  updateBanner();
+}
+// ---------- 広告 (アプリだけ) ----------
+// バナー: トップ・あそびかた・ポーズ・結果画面の下中央だけ (プレイ中は操作ボタンと重なるので出さない)
+let currentScreen = 'loading';
+function updateBanner() { Ads.setBanner(['title', 'how', 'pause', 'result'].includes(currentScreen)); }
+// 全画面広告: プレイを始める・トップに戻る・ポーズからの再開・結果からもう一度 / 次のステージ、のたびに毎回出す
+let adBusy = false;
+async function withInterstitial(next) {
+  if (adBusy) return;
+  if (Ads.available) {
+    adBusy = true;
+    await Ads.showInterstitial(3000);
+    adBusy = false;
+  }
+  next();
 }
 
 function finishMission() {
@@ -845,7 +944,7 @@ function finishMission() {
   if (!wasFree && freeUnlocked()) unlockMsg += `<div class="unlock">${tr('unlockFree')}</div>`;
   $('resBody').innerHTML += unlockMsg;
   $('resNext').classList.toggle('hidden', !next);
-  if (next) { $('resNext').innerHTML = `<b>${tr('nextStage', { m: mt(next) })}</b>`; $('resNext').onclick = () => startGame(next); }
+  if (next) { $('resNext').innerHTML = `<b>${tr('nextStage', { m: mt(next) })}</b>`; $('resNext').onclick = () => withInterstitial(() => startGame(next)); }
   showScreen('result');
   $('hud').classList.add('hidden');
   $('touch').classList.add('hidden');
@@ -1342,13 +1441,23 @@ function pause() {
   bgm.duck(true);
   showScreen('pause');
 }
-$('resumeBtn').onclick = () => { game.state = 'play'; bgm.duck(false); showScreen(null); lockPointer(); };
-$('retryBtn').onclick = () => startGame(game.mission);
-$('quitBtn').onclick = () => toTitle();
-$('resRetry').onclick = () => startGame(game.mission);
+function resumeGame() {
+  withInterstitial(() => {
+    if (game.state !== 'pause') return;
+    game.state = 'play'; bgm.duck(false); showScreen(null); lockPointer();
+  });
+}
+$('resumeBtn').onclick = resumeGame;
+$('retryBtn').onclick = () => withInterstitial(() => startGame(game.mission));
+$('quitBtn').onclick = () => withInterstitial(toTitle);
+$('resRetry').onclick = () => withInterstitial(() => startGame(game.mission));
 // 結果のシェア: スマホは端末の共有メニュー、パソコンは X の投稿画面
 $('resShare').onclick = async () => {
   if (!game.shareText) return;
+  if (plugin('Share')) {
+    try { await plugin('Share').share({ title: t('shareTitle'), text: game.shareText, url: SHARE_URL, dialogTitle: t('shareTitle') }); } catch (e) { /* キャンセル */ }
+    return;
+  }
   if (navigator.share && isTouch) {
     try { await navigator.share({ title: t('shareTitle'), text: game.shareText, url: SHARE_URL }); } catch (e) { /* キャンセル */ }
     return;
@@ -1365,7 +1474,7 @@ $('resCopy').onclick = async () => {
   }
   setTimeout(() => { $('resCopy').textContent = t('copy'); }, 1800);
 };
-$('resQuit').onclick = () => toTitle();
+$('resQuit').onclick = () => withInterstitial(toTitle);
 function toTitle() {
   game.state = 'title';
   bgm.stop();
@@ -1407,7 +1516,7 @@ function buildMenu() {
     b.innerHTML = open
       ? `${best ? `<span class="best">${'★'.repeat(best.stars)} ${fmt(best.t)}</span>` : ''}<b>${i + 1}. ${mt(m)}</b><span>${ms(m)}</span>`
       : `<b>🔒 ${i + 1}. ${mt(m)}</b><span>${t('lockedNeed', { m: mt(MISSIONS[i - 1]) })}</span>`;
-    b.onclick = () => { if (open) startGame(m); else { sfx.resume(); sfx.miss(); } };
+    b.onclick = () => { if (open) withInterstitial(() => startGame(m)); else { sfx.resume(); sfx.miss(); } };
     list.appendChild(b);
   });
   const fo = freeUnlocked();
@@ -1416,10 +1525,14 @@ function buildMenu() {
     ? `<b>${t('freeTitle')}</b><span>${t('freeOpen')}</span>`
     : `<b>🔒 ${t('freeTitle')}</b><span>${t('freeLocked')}</span>`;
   updateDexCount();
+  const nClear = MISSIONS.filter((m) => isCleared(m.id)).length;
+  $('titleBest').textContent = t('titleBest', { c: nClear, n: MISSIONS.length, d: dex.size, total: DEX_ALL.length });
 }
 buildMenu();
-$('freeBtn').onclick = () => { if (freeUnlocked()) startGame(FREE); else { sfx.resume(); sfx.miss(); } };
+$('freeBtn').onclick = () => { if (freeUnlocked()) withInterstitial(() => startGame(FREE)); else { sfx.resume(); sfx.miss(); } };
 $('howBtn').onclick = () => showScreen('how');
+$('playBtn').onclick = () => { sfx.resume(); showScreen('stages'); };
+$('stagesBack').onclick = () => showScreen('title');
 $('dexBtn').onclick = () => {
   $('dexTotal').textContent = t('dexCount', { n: dex.size, total: DEX_ALL.length });
   const l = $('dexList');
@@ -1432,7 +1545,38 @@ $('dexBtn').onclick = () => {
   }
   showScreen('dexScreen');
 };
-document.querySelectorAll('[data-close]').forEach((b) => { b.onclick = () => showScreen('title'); });
+// あそびかた → トップ (全画面広告)、ビル図鑑 → ステージをえらぶ
+document.querySelectorAll('#how [data-close]').forEach((b) => { b.onclick = () => withInterstitial(() => showScreen('title')); });
+document.querySelectorAll('#dexScreen [data-close]').forEach((b) => { b.onclick = () => showScreen('stages'); });
+
+// トップ画面の下に、バージョン (アプリ版)・プライバシーポリシー・広告の設定 (EU など) を出す
+if (window.APP_VERSION && window.APP_VERSION !== 'dev') $('buildInfo').textContent = window.APP_VERSION;
+if (LANG === 'en') $('privacyLink').href = 'https://techgym.jp/privacy-policy-en/';
+Ads.initDone.then(() => { if (Ads.privacyOptionsRequired) $('adPrivacy').hidden = false; });
+$('adPrivacyLink').addEventListener('click', (e) => { e.preventDefault(); Ads.showPrivacyOptions(); });
+
+// Android の戻るボタン: プレイ中はポーズ (ポーズ中なら再開)、トップ・結果画面ではアプリを閉じる。ほかの画面は一つ前へ
+if (plugin('App')) {
+  plugin('App').addListener('backButton', () => {
+    if (adBusy || Ads.showing) return;
+    if (revive.active) { closeRevive(); showCaughtResult(); return; }
+    if (game.state === 'play') { pause(); return; }
+    if (game.state === 'pause') { resumeGame(); return; }
+    if (currentScreen === 'how') withInterstitial(() => showScreen('title'));
+    else if (currentScreen === 'stages') showScreen('title');
+    else if (currentScreen === 'dexScreen') showScreen('stages');
+    else if (currentScreen === 'title' || currentScreen === 'result') plugin('App').exitApp();
+  });
+}
+// 別のアプリに切り替えたら一時停止して音を止める (広告の表示中は広告側が音を止めている)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    pause();
+    window.GameAudio.suspend();
+  } else if (!Ads.showing) {
+    window.GameAudio.resume();
+  }
+});
 document.querySelectorAll('#tod button').forEach((b) => { b.onclick = () => applyTod(b.dataset.v); });
 // 言語 (切り替えるとページを読み直す)
 document.querySelectorAll('#langSel button').forEach((b) => {

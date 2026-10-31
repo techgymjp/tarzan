@@ -179,3 +179,31 @@ body.touch #toast { white-space: normal; max-width: calc(100% - 24px); text-alig
 #oniDist.near { background: rgba(255,140,0,0.85); color: #221600; text-shadow: none; }
 #oniDist.chase { background: #e8272b; color: #fff; animation: oniBlink 0.4s infinite alternate; }
 body.touch #oniDist { bottom: 176px; left: 16px; font-size: 16px; }
+
+/* タイトル: ゲーム名・ひとこと・記録と大きなボタンだけ */
+.titlePanel h1 { font-size: 52px; }
+.titlePanel .lead { font-size: 17px; }
+.titleBest { margin: 4px 0 6px; font-size: 16px; color: var(--accent); font-weight: 800; }
+button.primary.big { font-size: 26px; padding: 16px; }
+button.mode.center { text-align: center; }
+button.mode.center b { font-size: 18px; }
+.legal { margin-top: 10px; font-size: 12px; opacity: 0.75; }
+.legal a { color: #9cd2ff; }
+.legal #buildInfo:not(:empty)::after { content: '｜'; }
+/* 鬼に捕まったときの「広告を見て続ける」 */
+#revive { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20;
+  background: rgba(5,8,16,0.55); }
+#revive.hidden { display: none; }
+#revive .small { font-size: 13px; opacity: 0.85; margin: 6px 0; }
+/* アプリ版: 画面の下中央のバナー広告 (高さ 50px) と重ならないように */
+body.app .screen { padding-bottom: 66px; }
+body.app .panel { max-height: calc(100vh - 82px); }
+@media (max-height: 500px) {
+  .titlePanel h1 { font-size: 34px; }
+  .titlePanel .lead { font-size: 14px; margin: 2px 0 4px; }
+  button.primary.big { font-size: 20px; padding: 10px; margin: 8px 0 4px; }
+  .panel { padding: 12px 16px; }
+  h2 { margin: 10px 0 6px; }
+}
+/* 画面 (ポーズ・結果など) は操作ボタンより手前に */
+.screen { z-index: 10; }

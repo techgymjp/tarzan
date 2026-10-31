@@ -64,6 +64,15 @@ const S = {
   goal: ['🏁 ゴール ', '🏁 GOAL '],
   unknown: ['？？？', '???'],
   shareTitle: ['ターザン大東京', 'Tarzan Dai-Tokyo'],
+  titleBest: ['クリア {c} / {n} ステージ ・ ビル図鑑 {d} / {total} 棟', 'Cleared {c} / {n} stages ・ Collection {d} / {total}'],
+  reviveWatch: ['広告を見て続ける', 'Watch an ad to continue'],
+  reviveNote: ['最後に立っていた屋上から再開し、近くの鬼を追い払う（1ゲーム {max} 回まで・あと {n} 回）', 'Restart from your last rooftop and drive the oni away ({max} per game, {n} left)'],
+  reviveSkip: ['あきらめる（{s}）', 'Give up ({s})'],
+  reviveLoading: ['広告を読み込み中…', 'Loading ad…'],
+  reviveFail: ['広告を読み込めませんでした', "Couldn't load the ad"],
+  revived: ['復活！ 鬼を追い払った', 'Back in! The oni were driven away'],
+  revivedN: ['（広告で復活 {n} 回）', '(continued with ads {n}×)'],
+  revivedShare: [' 復活 {n} 回', ' continues {n}'],
 };
 export function t(key, p = {}) {
   const e = S[key];
@@ -123,7 +132,7 @@ const STATIC_EN = {
   lead: 'Swing from building to building across real central Tokyo — with just one rope.',
   todLabel: 'Time', day: 'Day', dusk: 'Dusk', night: 'Night', langLabel: 'Language',
   missionsH: 'Delivery missions', freeH: 'Free roam',
-  howBtn: 'How to play', dexBtn: 'Building collection',
+  howBtn: '<b>How to play</b>', dexBtn: 'Building collection',
   credit: 'Building shapes and heights: MLIT Project PLATEAU (Tokyo 23 wards, 2020; partly via plateau-tokyo23ku-building-mvt-2020 by indigo-lab) / Expressway lines: © OpenStreetMap contributors / Water and minimap: GSI vector tiles and tiles (pale map). City data built from <a href="https://github.com/techgymjp/shutoko" target="_blank" rel="noopener">Shutoko GP</a> course data',
   howH: 'How to play',
   keys: `<tr><th>View</th><td>Mouse (click the screen to lock)</td><td>Drag the right side</td></tr>
@@ -144,6 +153,7 @@ const STATIC_EN = {
   back: 'Back', dexH: 'Building collection', pauseH: 'Paused', resume: 'Resume', retryBtn: '<b>Restart</b>', quitBtn: '<b>Title</b>',
   resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 100,000 PLATEAU buildings',
   tJump: 'JUMP',
+  playBtn: 'PLAY', privacy: 'Privacy policy', adSettings: 'Ad settings', reviveH: 'Caught by an oni!', reviveWatch: 'Watch an ad to continue',
 };
 export function applyStatic() {
   if (LANG !== 'en') return;

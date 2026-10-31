@@ -1,0 +1,21 @@
+{
+  "name": "tarzan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ターザン大東京 実在の東京都心のビルからビルへ、ロープ1本で飛び移る3Dアクション(Web / Android / iOS)",
+  "scripts": {
+    "build": "node scripts/build-web.js",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.2.1",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}

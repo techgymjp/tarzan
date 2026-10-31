@@ -1,0 +1,8 @@
+{
+  "appId": "jp.techgym.tarzan",
+  "appName": "ターザン大東京",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0b1020"
+  }
+}

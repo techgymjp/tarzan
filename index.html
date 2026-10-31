@@ -6,6 +6,7 @@
 <title>ターザン大東京</title>
 <meta name="description" content="実在の東京都心 (PLATEAU 3D都市モデル) を、ロープ1本でビルからビルへ飛び移るブラウザ3Dアクション">
 <link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 </head>
 <body>
 <div id="app"></div>
@@ -49,11 +50,29 @@
   <button id="tRetry">↺</button>
 </div>
 
-<!-- タイトル -->
+<!-- タイトル (ゲーム名・ひとこと・記録と「プレイ」「あそびかた」だけ) -->
 <div id="title" class="screen">
-  <div class="panel">
+  <div class="panel narrow titlePanel">
     <h1>ターザン大東京<small>TARZAN DAI-TOKYO</small></h1>
     <p class="lead" data-i18n="lead">実在の東京都心のビルからビルへ、ロープ1本で飛び移れ。</p>
+    <p id="titleBest" class="titleBest"></p>
+    <button class="primary big" id="playBtn" data-i18n="playBtn">プレイ</button>
+    <button class="mode center" id="howBtn" data-i18n="howBtn"><b>あそびかた</b></button>
+    <div id="legal" class="legal">
+      <span id="buildInfo"></span>
+      <a href="https://techgym.jp/privacy-policy/" id="privacyLink" target="_blank" rel="noopener" data-i18n="privacy">プライバシーポリシー</a>
+      <span id="adPrivacy" hidden>｜<a href="#" id="adPrivacyLink" data-i18n="adSettings">広告の設定</a></span>
+    </div>
+  </div>
+</div>
+
+<!-- ステージをえらぶ -->
+<div id="stages" class="screen hidden">
+  <div class="panel">
+    <h2 data-i18n="missionsH">配達ミッション</h2>
+    <div id="missionList"></div>
+    <h2 data-i18n="freeH">フリーターザン</h2>
+    <button class="mode" id="freeBtn"><b>ビル図鑑あつめ</b><span>霞が関ビルの屋上から自由に飛び回る。名前のあるビルの屋上に降りると図鑑に載る（<em id="dexCount">0</em>）</span></button>
     <div class="row">
       <span class="label" data-i18n="todLabel">時間帯</span>
       <div class="seg" id="tod">
@@ -66,16 +85,22 @@
       <span class="label" data-i18n="langLabel">言語 / Language</span>
       <div class="seg" id="langSel"><button data-v="ja">日本語</button><button data-v="en">English</button></div>
     </div>
-    <h2 data-i18n="missionsH">配達ミッション</h2>
-    <div id="missionList"></div>
-    <h2 data-i18n="freeH">フリーターザン</h2>
-    <button class="mode" id="freeBtn"><b>ビル図鑑あつめ</b><span>霞が関ビルの屋上から自由に飛び回る。名前のあるビルの屋上に降りると図鑑に載る（<em id="dexCount">0</em>）</span></button>
     <div class="row small">
-      <button class="link" id="howBtn" data-i18n="howBtn">あそびかた</button>
       <button class="link" id="dexBtn" data-i18n="dexBtn">ビル図鑑を見る</button>
     </div>
-    <p class="credit" data-i18n="credit">ビルの形と高さ: 国土交通省 Project PLATEAU（東京都23区 2020年度。一部は plateau-tokyo23ku-building-mvt-2020 by indigo-lab）／ 首都高の線: © OpenStreetMap contributors ／ 水面・ミニマップ: 国土地理院 ベクトルタイル・地理院タイル（淡色地図）。
+    <p class="credit" data-i18n="credit">ビルの形と高さ: 国土交通省 Project PLATEAU（東京都23区 2020年度。一部は plateau-tokyo23ku-building-mvt-2020 by indigo-lab）／ 首都高の線: © OpenStreetMap contributors ／ 水面・道路・ミニマップ: 国土地理院 ベクトルタイル・地理院タイル（淡色地図）。
       データは <a href="https://github.com/techgymjp/shutoko" target="_blank" rel="noopener">首都高グランプリ</a> のコースデータから作成</p>
+    <button class="primary" id="stagesBack" data-i18n="back">もどる</button>
+  </div>
+</div>
+
+<!-- 鬼に捕まったとき: 広告を見てその場から続ける (アプリだけ) -->
+<div id="revive" class="hidden">
+  <div class="panel narrow">
+    <h2 data-i18n="reviveH">鬼に捕まった！</h2>
+    <button class="primary" id="reviveWatch" data-i18n="reviveWatch">広告を見て続ける</button>
+    <p id="reviveNote" class="small"></p>
+    <button class="link" id="reviveSkip"></button>
   </div>
 </div>
 
@@ -141,6 +166,9 @@
 
 <div id="loading" class="screen"><div class="panel narrow"><h2 data-i18n="loadingH">東京を組み立て中…</h2><p data-i18n="loadingP">PLATEAU のビル 約10万棟</p></div></div>
 
+<script src="js/build-info.js"></script>
+<script src="js/ads-config.js"></script>
+<script src="js/ads.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
