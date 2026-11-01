@@ -289,7 +289,7 @@ export class Oni {
         if (d < CATCH_RADIUS) out.caught = true;
       }
       // 遠くの鬼は描かない (数が多いステージでも重くならないように)
-      o.obj.visible = Math.hypot(o.pos.x - p.x, o.pos.z - p.z) < 1500;
+      o.obj.visible = Math.hypot(o.pos.x - p.x, o.pos.z - p.z) < (this.viewR || 1500);
       if (!o.obj.visible) continue;
       // 見た目: ふわふわ浮いて、進む方向を向き、金棒を振る (追いかけるときは激しく)
       const chasing = o.state === 'chase';

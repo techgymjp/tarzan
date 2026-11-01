@@ -5,7 +5,19 @@ import * as THREE from '../vendor/three.module.min.js';
 
 const CELL = 500;
 const hex = (c) => (c ? c.getHex() : -1);
+// 模様も光もない単色の材料は、色を頂点に持たせて 1 つの材料にまとめる (色ちがいの部品もいっしょに描ける)
+const plainMats = new Map();
+function isPlain(m) {
+  return (m.type === 'MeshLambertMaterial' || m.type === 'MeshBasicMaterial') && !m.map && !m.emissiveMap && !m.vertexColors && !m.transparent
+    && m.opacity === 1 && !m.alphaTest && m.depthWrite && m.depthTest && !m.polygonOffset && (!m.emissive || m.emissive.getHex() === 0);
+}
+function plainMaterial(m) {
+  const key = m.type + '|' + m.side + '|' + m.fog + '|' + !!m.flatShading;
+  if (!plainMats.has(key)) plainMats.set(key, new THREE[m.type]({ vertexColors: true, side: m.side, fog: m.fog, flatShading: !!m.flatShading }));
+  return plainMats.get(key);
+}
 function signature(m) {
+  if (isPlain(m)) return 'plain|' + m.type + '|' + m.side + '|' + m.fog + '|' + !!m.flatShading;
   return [m.type, hex(m.color), hex(m.emissive), m.emissiveIntensity, m.map ? m.map.uuid : '', m.emissiveMap ? m.emissiveMap.uuid : '',
     m.side, m.transparent, m.opacity, m.vertexColors, m.fog, m.depthWrite, m.depthTest, m.polygonOffset, m.alphaTest].join('|');
 }
@@ -16,16 +28,19 @@ export function mergeStatic(scene, roots) {
   const box = new THREE.Box3(), c = new THREE.Vector3();
   const victims = [];
   for (const root of roots) {
-    if (root.userData.noMerge) continue;
+    // byInstance: 材料はそのまま (夜に色を変える材料もあるので)、同じ材料の部品どうしだけをまとめる
+    const byInstance = !!root.userData.mergeByInstance;
+    if (root.userData.noMerge && !byInstance) continue;
     root.updateMatrixWorld(true);
     root.traverse((o) => {
       if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || Array.isArray(o.material) || o.renderOrder !== 0) return;
-      for (let p = o; p; p = p.parent) if (p.userData.noMerge) return;
+      for (let p = o; p; p = p.parent) if (p.userData.noMerge && !p.userData.mergeByInstance) return;
       const g = o.geometry;
       if (!g.attributes.position || g.morphAttributes.position) return;
       box.setFromObject(o).getCenter(c);
-      const key = Math.floor(c.x / CELL) + ',' + Math.floor(c.z / CELL) + '|' + signature(o.material);
-      if (!groups.has(key)) groups.set(key, { mat: o.material, list: [], cx: (Math.floor(c.x / CELL) + 0.5) * CELL, cz: (Math.floor(c.z / CELL) + 0.5) * CELL });
+      const plain = !byInstance && isPlain(o.material);
+      const key = Math.floor(c.x / CELL) + ',' + Math.floor(c.z / CELL) + '|' + (byInstance ? 'inst|' + o.material.uuid : signature(o.material));
+      if (!groups.has(key)) groups.set(key, { mat: plain ? plainMaterial(o.material) : o.material, plain, list: [], cx: (Math.floor(c.x / CELL) + 0.5) * CELL, cz: (Math.floor(c.z / CELL) + 0.5) * CELL });
       groups.get(key).list.push(o);
       victims.push(o);
     });
@@ -51,14 +66,15 @@ export function mergeStatic(scene, roots) {
         n.fromBufferAttribute(na, k).applyMatrix3(nm).normalize();
         P.push(v.x, v.y, v.z); N.push(n.x, n.y, n.z);
         if (wantUV) U.push(ua ? ua.getX(k) : 0, ua ? ua.getY(k) : 0);
-        if (wantColor) C.push(ca ? ca.getX(k) : 1, ca ? ca.getY(k) : 1, ca ? ca.getZ(k) : 1);
+        if (grp.plain) C.push(o.material.color.r, o.material.color.g, o.material.color.b);
+        else if (wantColor) C.push(ca ? ca.getX(k) : 1, ca ? ca.getY(k) : 1, ca ? ca.getZ(k) : 1);
       }
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
     if (wantUV) geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
-    if (wantColor) geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+    if (wantColor || grp.plain) geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, m);
     mesh.matrixAutoUpdate = false;

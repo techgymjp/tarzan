@@ -540,6 +540,7 @@ export class City {
       g.setAttribute('color', new THREE.Float32BufferAttribute(B.c, 3));
       g.computeBoundingSphere();
       const mesh = new THREE.Mesh(g, mats[k]);
+      mesh.matrixAutoUpdate = false; // 動かない
       this.tileGroup.add(mesh);
       t.meshes.push(mesh);
     }
@@ -554,6 +555,7 @@ export class City {
         bm.setColorAt(i, col.setRGB(0.62 + r * 0.25, 0.63 + r * 0.25, 0.64 + r * 0.25));
       }
       bm.computeBoundingSphere();
+      bm.matrixAutoUpdate = false;
       this.tileGroup.add(bm);
       t.meshes.push(bm);
     }

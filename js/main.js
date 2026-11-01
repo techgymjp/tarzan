@@ -37,7 +37,7 @@ const store = {
 
 // ---------- 描画の準備 ----------
 const renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance', stencil: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1.25 : 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1 : 2));
 renderer.setSize(innerWidth, innerHeight);
 $('app').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
@@ -110,15 +110,17 @@ const mats = {
 const city = new City();
 city.buildMeshes(scene, mats);
 // 描画する範囲 (カメラからの半径 m)。スマホは狭く。もやの終わりもこれに合わせる (境目が見えないように)
-const DRAW_R = isTouch ? 1700 : 3400;
+const DRAW_R = isTouch ? 1300 : 3400;
 city.buildRoads(scene);
 const lmStart = scene.children.length;
 const tower = addTokyoTower(scene, city);
 addDiet(scene, city);
 const noMergeFrom = scene.children.length;
 const techgym = addTechGym(scene, city);
+for (const o of scene.children.slice(noMergeFrom)) o.userData.moving = o.userData.noMerge = true; // アドバルーンが揺れる
+const domeFrom = scene.children.length;
 const dome = addTokyoDome(scene, city);
-for (const o of scene.children.slice(noMergeFrom)) o.userData.noMerge = true; // 夜に光る・アドバルーンが揺れる
+for (const o of scene.children.slice(domeFrom)) o.userData.mergeByInstance = true; // 夜に光る (材料はそのまま)
 const budokan = addBudokan(scene, city);
 const palace = addImperialPalace(scene, city);
 const togu = addTogu(scene, city);
@@ -140,8 +142,16 @@ const ua = addUenoAsakusa(scene, city);
 const od = addOdaiba(scene, city);
 const gn = addGinzaNihonbashi(scene, city);
 // 東京タワーは夜に色が変わるのでまとめない
-for (const o of scene.children.slice(lmStart, lmStart + 1)) o.userData.noMerge = true;
+for (const o of scene.children.slice(lmStart, lmStart + 1)) o.userData.mergeByInstance = true;
 const merged = mergeStatic(scene, scene.children.slice(lmStart));
+// 動かないもの (街・道路・水面・名所など) は、毎フレームの位置の計算をやめる (数千個あるので重い)
+// 動くもの: 空 (カメラについて動く)・光・テックジムのアドバルーン・走る電車
+scene.updateMatrixWorld(true);
+scene.matrixAutoUpdate = false; // シーン自体が動くと、中のものを全部計算し直してしまう
+for (const o of scene.children) {
+  if (o === sky || o.isLight || o.userData.moving) continue;
+  o.traverse((q) => { q.matrixAutoUpdate = false; });
+}
 const skytreeMat = addSkytree(scene);
 const fuji = addFuji(scene);
 const distant = addDistant(scene);
@@ -157,6 +167,7 @@ const player = new Player(scene, city, sfx);
 const fireworks = new Fireworks(scene);
 const heli = new Heli(scene, city);
 const oni = new Oni(scene, city);
+oni.viewR = Math.min(1500, DRAW_R + 200); // 描く範囲より遠い鬼は描かない
 
 // 著名なビルに名前を付けて、屋上の上にラベルを浮かべる
 const labels = [];
@@ -210,16 +221,23 @@ for (const bd of city.bld) {
   scene.add(sp);
   labels.push({ sp, x: bd.cx, z: bd.cz, text: bd.name });
 }
+// ビル名のラベル: 近いものから (スマホは 10 個、パソコンは 24 個まで。多いと重く、画面もうるさい)
+const LABEL_R = Math.min(1600, DRAW_R), LABEL_MAX = isTouch ? 10 : 24;
 function updateLabels() {
   const cp = camera.position;
+  const near = [];
   for (const l of labels) {
-    const d = Math.hypot(l.x - cp.x, l.z - cp.z);
-    const vis = d < 1600 && game.state === 'play';
-    l.sp.visible = vis;
-    if (!vis) continue;
+    l.d = Math.hypot(l.x - cp.x, l.z - cp.z);
+    l.sp.visible = false;
+    if (l.d < LABEL_R && game.state === 'play') near.push(l);
+  }
+  if (near.length > LABEL_MAX) near.sort((a, b) => a.d - b.d).length = LABEL_MAX;
+  for (const l of near) {
+    const d = l.d;
+    l.sp.visible = true;
     const s = 0.06 * THREE.MathUtils.clamp(1.2 - d / 2000, 0.55, 1);
     l.sp.scale.set(s * l.sp.userData.aspect, s, 1);
-    l.sp.material.opacity = THREE.MathUtils.clamp((1600 - d) / 300, 0, 1);
+    l.sp.material.opacity = THREE.MathUtils.clamp((LABEL_R - d) / 300, 0, 1);
   }
 }
 
@@ -1608,7 +1626,7 @@ setBgm(bgmOn);
 
 // スマホで重いときは、描く解像度を自動で下げる。解像度を変えると描く場所を作り直すので一瞬止まる。
 // 何度も上げ下げしないよう、下げるのは 4 秒ごとに少しずつ、一度下げたらそのあとは上げない
-const PR_MAX = Math.min(devicePixelRatio, isTouch ? 1.25 : 2), PR_MIN = Math.min(PR_MAX, isTouch ? 0.7 : 1);
+const PR_MAX = Math.min(devicePixelRatio, isTouch ? 1 : 2), PR_MIN = Math.min(PR_MAX, isTouch ? 0.6 : 1);
 let prNow = PR_MAX, prT = 0, prN = 0, prLowered = false;
 function adaptResolution(dt) {
   if (game.state !== 'play') { prT = 0; prN = 0; return; }
