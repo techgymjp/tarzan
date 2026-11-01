@@ -2,6 +2,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { CITY } from './city-data.js';
 import { HIGHWAYS } from './road-data.js';
+import { splitByCell } from './merge.js';
 
 export const KX = 111320 * Math.cos(CITY.origin[0] * Math.PI / 180);
 export const KZ = 110574;
@@ -566,6 +567,16 @@ export class City {
     t.meshes = null;
   }
 
+  // 組み立て済みのタイルのうち、描く範囲より遠いものは描かない (捨てるのはもっと遠くなってから)
+  cullTiles(cam, R) {
+    const x = cam.position.x, z = cam.position.z;
+    for (const t of this.tiles.values()) {
+      if (!t.meshes) continue;
+      const v = Math.hypot(t.cx - x, t.cz - z) - 340 < R;
+      if (t.meshes[0] && t.meshes[0].visible !== v) for (const m of t.meshes) m.visible = v;
+    }
+  }
+
   // カメラ (x, z) から半径 R のタイルを用意し、R + 600 より遠いものは捨てる。budget: 1回に組み立てるタイルの数 (多いとカクつく)
   streamTiles(x, z, R, budget = 1) {
     const want = [];
@@ -624,8 +635,7 @@ export class City {
     g.setAttribute('position', new THREE.Float32BufferAttribute(deck.p, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(deck.n, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(deck.c, 3));
-    const mesh = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
-    scene.add(mesh);
+    const mesh = splitByCell(scene, g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
     // 橋脚
     const pg = new THREE.BoxGeometry(3, 1, 3);
     pg.translate(0, 0.5, 0);

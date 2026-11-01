@@ -43,7 +43,7 @@ function makeOni(color) {
   const cloud = new THREE.Group();
   const cloudMat = M(0xffffff, { emissive: 0x666666 });
   for (const [x, y, z, r] of [[0, 0, 0, 1.1], [1, 0.1, 0.3, 0.8], [-1, 0.05, -0.2, 0.85], [0.4, 0.2, -0.8, 0.7], [-0.5, 0.15, 0.8, 0.7], [1.6, -0.1, -0.4, 0.55], [-1.6, -0.1, 0.4, 0.55]]) {
-    add(cloud, new THREE.SphereGeometry(r, 12, 10), cloudMat, x, y, z).scale.y = 0.7;
+    add(cloud, new THREE.SphereGeometry(r, 9, 6), cloudMat, x, y, z).scale.y = 0.7;
   }
   cloud.position.y = -1.0;
   cloud.name = 'cloud';
@@ -57,7 +57,7 @@ function makeOni(color) {
   head.name = 'head';
   head.position.y = 1.65;
   g.add(head);
-  add(head, new THREE.SphereGeometry(0.55, 16, 12), skin, 0, 0, 0);
+  add(head, new THREE.SphereGeometry(0.55, 12, 9), skin, 0, 0, 0);
   for (const sx of [-1, 1]) {
     add(head, new THREE.ConeGeometry(0.13, 0.55, 10), horn, sx * 0.28, 0.5, 0).rotation.z = -sx * 0.3;
     add(head, new THREE.SphereGeometry(0.15, 10, 8), white, sx * 0.2, 0.08, -0.45);

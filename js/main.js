@@ -2,6 +2,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { City, ll } from './city.js';
 import { ROADS } from './road-data.js';
+import { mergeStatic, splitByCell, cullPieces } from './merge.js';
 import { Player, P } from './player.js';
 import { Sfx, Bgm } from './audio.js';
 import { MISSIONS, AREAS, FAMOUS, ONI_BASE_DENSITY, ONI_STEP } from './missions.js';
@@ -36,7 +37,7 @@ const store = {
 
 // ---------- 描画の準備 ----------
 const renderer = new THREE.WebGLRenderer({ antialias: !isTouch, powerPreference: 'high-performance', stencil: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1.5 : 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
 $('app').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
@@ -109,12 +110,15 @@ const mats = {
 const city = new City();
 city.buildMeshes(scene, mats);
 // 描画する範囲 (カメラからの半径 m)。スマホは狭く。もやの終わりもこれに合わせる (境目が見えないように)
-const DRAW_R = isTouch ? 2200 : 3400;
+const DRAW_R = isTouch ? 1700 : 3400;
 city.buildRoads(scene);
+const lmStart = scene.children.length;
 const tower = addTokyoTower(scene, city);
 addDiet(scene, city);
+const noMergeFrom = scene.children.length;
 const techgym = addTechGym(scene, city);
 const dome = addTokyoDome(scene, city);
+for (const o of scene.children.slice(noMergeFrom)) o.userData.noMerge = true; // 夜に光る・アドバルーンが揺れる
 const budokan = addBudokan(scene, city);
 const palace = addImperialPalace(scene, city);
 const togu = addTogu(scene, city);
@@ -135,6 +139,9 @@ const ik = addIkebukuroShinagawa(scene, city);
 const ua = addUenoAsakusa(scene, city);
 const od = addOdaiba(scene, city);
 const gn = addGinzaNihonbashi(scene, city);
+// 東京タワーは夜に色が変わるのでまとめない
+for (const o of scene.children.slice(lmStart, lmStart + 1)) o.userData.noMerge = true;
+const merged = mergeStatic(scene, scene.children.slice(lmStart));
 const skytreeMat = addSkytree(scene);
 const fuji = addFuji(scene);
 const distant = addDistant(scene);
@@ -314,12 +321,9 @@ const waterDepth = (x, z) => {
   }
   const geo = (arr) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.computeVertexNormals(); return g; };
   // 1) 水の形をステンシルに書く (色も深さも書かない)。地面より先に描く
-  const maskMesh = new THREE.Mesh(geo(mask), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }));
-  maskMesh.renderOrder = -1;
-  scene.add(maskMesh);
+  splitByCell(scene, geo(mask), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp }), (m) => { m.renderOrder = -1; });
   // 2) 沈めた水面と石垣
-  const water = new THREE.Mesh(geo(pos), new THREE.MeshPhongMaterial({ color: 0x3e6f84, specular: 0x8899aa, shininess: 60 }));
-  scene.add(water);
+  splitByCell(scene, geo(pos), new THREE.MeshPhongMaterial({ color: 0x3e6f84, specular: 0x8899aa, shininess: 60 }));
   const sc = document.createElement('canvas');
   sc.width = 128; sc.height = 64;
   ((c, w, h) => {
@@ -387,7 +391,7 @@ const waterDepth = (x, z) => {
     uv.push(0, ha, L, hb, L, 0, 0, ha, L, 0, 0, 0);
   }
   wg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  scene.add(new THREE.Mesh(wg, stoneMat));
+  splitByCell(scene, wg, stoneMat);
 }
 // 幹線道路 (国道・都道・幅の広い区道): 地面の上にアスファルトの帯と、広い道には白い中央線
 {
@@ -417,8 +421,7 @@ const waterDepth = (x, z) => {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.computeVertexNormals();
-  const roads = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-  scene.add(roads);
+  splitByCell(scene, g, new THREE.MeshLambertMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
 }
 const outer = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshLambertMaterial({ color: 0x5f7a4c }));
 outer.rotation.x = -Math.PI / 2;
@@ -451,23 +454,33 @@ scene.add(outer);
   }
   const crown = new THREE.IcosahedronGeometry(1, 0);
   crown.translate(0, 1.6, 0);
-  const im = new THREE.InstancedMesh(crown, new THREE.MeshLambertMaterial({ color: 0xffffff }), pts.length);
-  const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  // 木は 1 本ずつ形を作って、500m 四方の区画ごとにまとめる (画面の外や遠くの区画の木は描かない)。スマホは本数を減らす
+  const cp = crown.toNonIndexed().attributes.position, cn = crown.toNonIndexed().attributes.normal;
+  const keep = isTouch ? 0.6 : 1;
+  const P = [], N = [], C = [];
+  const m4 = new THREE.Matrix4(), nm = new THREE.Matrix3(), v = new THREE.Vector3(), n = new THREE.Vector3(), col = new THREE.Color();
   pts.forEach(([x, z, r], i) => {
+    if (keep < 1 && (i * 0.618) % 1 > keep) return;
     const sc = 4 + r * 5;
     if (inPlaza(x, z)) {
       // 黒松: 平たく横に広がった濃い緑
       m4.makeScale(sc * 0.9, sc * 0.55, sc * 0.9).setPosition(x, 1.5, z);
-      im.setMatrixAt(i, m4);
-      im.setColorAt(i, col.setHSL(0.33, 0.35, 0.16 + r * 0.05));
-      return;
+      col.setHSL(0.33, 0.35, 0.16 + r * 0.05);
+    } else {
+      m4.makeScale(sc, sc * 1.1, sc).setPosition(x, 0, z);
+      if (r < 0.12) col.setHex(0xe0b52a); else if (r < 0.18) col.setHex(0xc4512c); else col.setHSL(0.27 + r * 0.06, 0.45, 0.22 + r * 0.1);
     }
-    m4.makeScale(sc, sc * 1.1, sc).setPosition(x, 0, z);
-    im.setMatrixAt(i, m4);
-    if (r < 0.12) col.setHex(0xe0b52a); else if (r < 0.18) col.setHex(0xc4512c); else col.setHSL(0.27 + r * 0.06, 0.45, 0.22 + r * 0.1);
-    im.setColorAt(i, col);
+    nm.getNormalMatrix(m4);
+    for (let k = 0; k < cp.count; k++) {
+      v.fromBufferAttribute(cp, k).applyMatrix4(m4); n.fromBufferAttribute(cn, k).applyMatrix3(nm).normalize();
+      P.push(v.x, v.y, v.z); N.push(n.x, n.y, n.z); C.push(col.r, col.g, col.b);
+    }
   });
-  scene.add(im);
+  const tg = new THREE.BufferGeometry();
+  tg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  tg.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  tg.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+  splitByCell(scene, tg, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
 }
 
 // 影 (足元の丸)
@@ -1158,7 +1171,7 @@ function toDetail(x, z) {
   const [lat, lon] = worldToGeo(x, z);
   return [lonToTileX(lon, DETAIL_Z) * 256, latToTileY(lat, DETAIL_Z) * 256];
 }
-let mmZoom = 0.85;
+let mmZoom = 0.85, mmT = 0;
 // ミニマップをタップ (クリック) すると大きく広げる。もう一度で戻す
 mmEl.addEventListener('pointerdown', (e) => { e.stopPropagation(); mmEl.classList.toggle('big'); });
 function drawMinimap() {
@@ -1593,17 +1606,19 @@ function setBgm(on) {
 document.querySelectorAll('#bgmSel button').forEach((b) => { b.onclick = () => setBgm(b.dataset.v === 'on'); });
 setBgm(bgmOn);
 
-// スマホで重いときは、描く解像度を自動で下げる (軽いときは戻す)
-const PR_MAX = Math.min(devicePixelRatio, isTouch ? 1.5 : 2), PR_MIN = Math.min(PR_MAX, 0.85);
-let prNow = PR_MAX, prT = 0, prN = 0;
+// スマホで重いときは、描く解像度を自動で下げる。解像度を変えると描く場所を作り直すので一瞬止まる。
+// 何度も上げ下げしないよう、下げるのは 4 秒ごとに少しずつ、一度下げたらそのあとは上げない
+const PR_MAX = Math.min(devicePixelRatio, isTouch ? 1.25 : 2), PR_MIN = Math.min(PR_MAX, isTouch ? 0.7 : 1);
+let prNow = PR_MAX, prT = 0, prN = 0, prLowered = false;
 function adaptResolution(dt) {
+  if (game.state !== 'play') { prT = 0; prN = 0; return; }
   prT += dt; prN++;
-  if (prT < 2) return;
+  if (prT < 4) return;
   const avg = prT / prN;
   prT = 0; prN = 0;
   let next = prNow;
-  if (avg > 1 / 40) next = Math.max(PR_MIN, prNow - 0.2);
-  else if (avg < 1 / 57) next = Math.min(PR_MAX, prNow + 0.1);
+  if (avg > 1 / 45) { next = Math.max(PR_MIN, Math.round((prNow - 0.15) * 100) / 100); prLowered = true; }
+  else if (!prLowered && avg < 1 / 58) next = Math.min(PR_MAX, prNow + 0.1);
   if (next !== prNow) { prNow = next; renderer.setPixelRatio(prNow); renderer.setSize(innerWidth, innerHeight); }
 }
 // ---------- ループ ----------
@@ -1632,6 +1647,9 @@ function frame() {
     while (city.streamTiles(camera.position.x, camera.position.z, DRAW_R, 1) > 0 && performance.now() - t0 < (isTouch ? 4 : 6));
   }
   adaptResolution(dt);
+  merged.cull(camera, DRAW_R);
+  cullPieces(camera, DRAW_R);
+  city.cullTiles(camera, DRAW_R);
   sky.position.copy(camera.position);
   distant.follow(camera);
   fuji.follow(camera);
@@ -1747,7 +1765,7 @@ function update(dt) {
   // 照準
   // つかめる位置にいたら知らせる
   const canGrab = !player.rope && heli.reachDist(player.hand()) <= REACH;
-  $('groundTip').classList.toggle('hidden', !canGrab);
+  $('groundTip').classList.toggle('hidden', !canGrab || game.countdown > 0); // カウントダウン中は数字と重なるので出さない
   $('groundTip').textContent = isTouch ? t('grabTouch') : t('grabPC');
   $('tRope').classList.toggle('ready', canGrab);
   $('tRope').textContent = player.rope ? t('release') : t('grab');
@@ -1806,7 +1824,9 @@ function update(dt) {
   }
   areaTimer -= dt;
   if (areaTimer <= 0) $('area').classList.remove('show');
-  drawMinimap();
+  // ミニマップ: スマホは 1 秒に 20 回ほどに減らす (地図の描き直しは重い)
+  mmT += dt;
+  if (!isTouch || mmT >= 0.05) { mmT = 0; drawMinimap(); }
 }
 
 addEventListener('resize', () => {
@@ -1819,4 +1839,4 @@ addEventListener('resize', () => {
 showScreen('title');
 frame();
 // テスト用 (コンソールから)
-if (location.search.includes('debug')) window.dbg = { tileCache, game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, oni, fireworks, launchFireworks, tryFire, applyTod };
+if (location.search.includes('debug')) window.dbg = { renderer, scene, camera, tileCache, game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, oni, fireworks, launchFireworks, tryFire, applyTod };

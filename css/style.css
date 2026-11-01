@@ -207,3 +207,9 @@ body.app .panel { max-height: calc(100vh - 82px); }
 }
 /* 画面 (ポーズ・結果など) は操作ボタンより手前に */
 .screen { z-index: 10; }
+/* スマホ横向き: 上から 次の目的地 → 地名 → お知らせ の順に、重ならないよう縦に並べる。カウントダウンはその下 */
+@media (orientation: landscape) {
+  body.touch #area { top: 92px; font-size: 18px; }
+  body.touch #toast { top: 124px; }
+  body.touch #countdown { top: 56%; font-size: 72px; }
+}

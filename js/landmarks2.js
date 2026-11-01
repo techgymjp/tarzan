@@ -296,6 +296,7 @@ function train(scene, color, cars) {
   const body = M(color), silver = M(0xd8dde2), glass = M(0x2d3a48);
   for (let i = 0; i < cars; i++) {
     const c = new THREE.Group();
+    c.userData.noMerge = true; // 走る電車はまとめない
     mesh(new THREE.BoxGeometry(2.9, 3.4, 19.5), silver, 0, 1.9, 0, c);
     mesh(new THREE.BoxGeometry(3.0, 0.7, 19.6), body, 0, 2.2, 0, c);
     mesh(new THREE.BoxGeometry(3.0, 0.9, 18), glass, 0, 3.0, 0, c);
