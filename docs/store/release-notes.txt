@@ -1,0 +1,14 @@
+<ja-JP>
+ターザン大東京、はじめてのリリースです。
+実在の東京都心のビルからビルへ、ヘリのロープ1本で飛び移ろう！
+・新宿・渋谷・銀座・浅草・お台場など、約10万棟の東京を再現
+・東京タワー、皇居、東京駅、レインボーブリッジなどの名所
+・鬼から逃げながら10の配達ミッションに挑戦
+</ja-JP>
+<en-US>
+First release of Tarzan Tokyo.
+Swing from building to building across real central Tokyo on a single helicopter rope!
+・About 100,000 buildings: Shinjuku, Shibuya, Ginza, Asakusa, Odaiba and more
+・Landmarks like Tokyo Tower, the Imperial Palace, Tokyo Station and Rainbow Bridge
+・Escape the oni across 10 delivery missions
+</en-US>
