@@ -1,0 +1,42 @@
+App name (30 characters max)
+Tarzan Tokyo: Rooftop Swing
+
+Short description (80 characters max)
+Swing across real Tokyo's rooftops on a helicopter rope—and escape the oni!
+
+Full description
+Below you lies the real city of Tokyo.
+Swing over about 100,000 buildings built from Japan's official 3D city model "PLATEAU", hanging from a single rope dangling from a helicopter.
+
+■ One rope, building to building
+・GRAB the rope of the helicopter flying just ahead, then LET GO to soar
+・Let go just as the swing starts rising for a "Nice release!" boost
+・Chain swings without touching the ground to build your combo
+・Touch the glowing orbs (checkpoints) on rooftops to set off fireworks
+
+■ Fly over the real Tokyo
+・Shinjuku, Shibuya, Roppongi, Kasumigaseki, Marunouchi, Ginza, Nihonbashi, Odaiba, Ikebukuro, Shinagawa, Ueno and Asakusa
+・Hand-made landmarks: Tokyo Tower, the National Diet, the Imperial Palace, Tokyo Station, Tokyo Dome, Nippon Budokan, Senso-ji and Kaminarimon, the museums of Ueno Park, Rainbow Bridge and more
+・The palace moats, the Kanda River, expressways and avenues, with Mt. Fuji, the mountains and Tokyo Bay in the distance
+・Day, dusk and night. At night Tokyo Tower and the office windows light up
+
+■ Tag with the oni
+・Oni riding clouds prowl the city and chase you if you get close
+・If one catches you, it's game over—escape on the helicopter rope
+・More oni appear as the stages go on
+
+■ 10 delivery missions
+・From "Kasumigaseki Debut" to "Shinjuku → Akihabara (Sobu Line)" and "Tokyo Tower → Shinagawa"
+・Clear a stage to unlock the next. Clear them all to unlock free roam "Building Collection"
+・Land on named buildings to add them to your collection (266 buildings)
+
+■ Easy controls
+・Left stick to move and turn; right buttons to GRAB / LET GO and JUMP
+・The minimap shows the next checkpoint and nearby oni
+
+■ Also
+・Caught by an oni? Watch an ad to continue from where you were (up to 3 times per game)
+・Share your results with friends
+・Japanese and English
+
+Map and building data: MLIT Project PLATEAU, Geospatial Information Authority of Japan, © OpenStreetMap contributors

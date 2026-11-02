@@ -181,7 +181,8 @@ body.touch #toast { white-space: normal; max-width: calc(100% - 24px); text-alig
 body.touch #oniDist { bottom: 176px; left: 16px; font-size: 16px; }
 
 /* タイトル: ゲーム名・ひとこと・記録と大きなボタンだけ */
-.titlePanel h1 { font-size: 52px; }
+.panel.titlePanel { width: min(560px, 100%); }
+.titlePanel h1 { font-size: 52px; white-space: nowrap; }
 .titlePanel .lead { font-size: 17px; }
 .titleBest { margin: 4px 0 6px; font-size: 16px; color: var(--accent); font-weight: 800; }
 button.primary.big { font-size: 26px; padding: 16px; }
