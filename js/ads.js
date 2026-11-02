@@ -13,7 +13,7 @@ window.Ads = (() => {
       },
       // 本番の広告ユニット (AdMob の Android アプリ「ターザン大東京」)。空の種類は本番ビルドでは出さない
       production: {
-        interstitial: '',
+        interstitial: 'ca-app-pub-6411535997477460/6501661210',
         rewarded: '',
         banner: 'ca-app-pub-6411535997477460/1440906227',
       },
