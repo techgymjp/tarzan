@@ -11,11 +11,11 @@ window.Ads = (() => {
         rewarded: 'ca-app-pub-3940256099942544/5224354917',
         banner: 'ca-app-pub-3940256099942544/6300978111',
       },
-      // 本番の広告ユニット (AdMob の Android アプリ「ターザン大東京」)。届くまでは空 = 本番ビルドでは広告を出さない
+      // 本番の広告ユニット (AdMob の Android アプリ「ターザン大東京」)。空の種類は本番ビルドでは出さない
       production: {
         interstitial: '',
         rewarded: '',
-        banner: '',
+        banner: 'ca-app-pub-6411535997477460/1440906227',
       },
     },
   };
