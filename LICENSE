@@ -48,5 +48,5 @@ affected by the terms above:
   minimap: Geospatial Information Authority of Japan (GSI) vector tiles and map tiles. These sources
   are credited in the game.
 
-The Android app also uses Capacitor and @capacitor-community/admob (MIT License), installed
+The Android and iOS apps also use Capacitor and @capacitor-community/admob (MIT License), installed
 from npm at build time.
