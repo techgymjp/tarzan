@@ -23,7 +23,7 @@
    - バンドル ID：`jp.techgym.tarzan` ／ SKU：`tarzan` ／ ユーザアクセス：アクセス制限なし
 3. **AdMob**
    - 「アプリを追加」→ **iOS** →「ストアに掲載されていない」で登録し、バナー・インタースティシャル・リワードの広告ユニットを作る
-   - アプリ ID と広告ユニット ID 3 つを Claude Code に渡す（`ios/App/App/Info.plist` の `GADApplicationIdentifier` と `js/ads.js` の `UNITS.ios.production` に入れます。届くまでは Google のテスト用アプリ ID が入っていて、本番ビルドでは広告が出ません）
+   - アプリ ID と広告ユニット ID 3 つを Claude Code に渡す（`ios/App/App/Info.plist` の `GADApplicationIdentifier` と `js/ads.js` の `UNITS.ios.production` に入れます。空の種類は本番ビルドでは出しません）
    - 「プライバシーとメッセージ」→「欧州の規制」のメッセージに iOS アプリも追加する
 
 ---
