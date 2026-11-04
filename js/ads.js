@@ -27,7 +27,7 @@ window.Ads = (() => {
       },
       // 本番の広告ユニット (AdMob の iOS アプリ「ターザン大東京」)。空の種類は本番ビルドでは出さない
       production: {
-        interstitial: '',
+        interstitial: 'ca-app-pub-6411535997477460/5735745589',
         rewarded: '',
         banner: 'ca-app-pub-6411535997477460/2323114182',
       },
