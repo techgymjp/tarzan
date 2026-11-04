@@ -1,0 +1,14 @@
+App Store Connect → 配信 → 「App Review に関する情報」→「メモ」に貼る文（英語）。
+初回の審査で「Guideline 2.1 - Information Needed」が来たら、同じ文を返信し、実機での操作の録画（docs/IOS_BUILD.md の 4 章）を添付する。
+ログイン情報: 不要（「サインインが必要」のチェックは外す）
+
+----------------------------------------
+1. Purpose and audience: Tarzan Tokyo is a free 3D action game for ages 13+. Players swing from building to building over a recreation of central Tokyo, hanging from a rope that dangles from a helicopter, while avoiding cartoon oni (Japanese ogres) that chase them.
+
+2. How to use: No login or account is needed. Tap "PLAY" ("プレイ" in Japanese), choose a stage, then tap GRAB to catch the rope and again to let go; move with the left stick and use JUMP on the right. The game is shown in English on English-language devices and in Japanese on Japanese-language devices.
+
+3. External services: Google AdMob (banner, interstitial and rewarded ads) with Google's consent form (UMP) and App Tracking Transparency. Rewarded ads are optional: when the player is caught by an oni, watching one lets them continue from their last rooftop (up to 3 times per game). The minimap loads map tiles from the Geospatial Information Authority of Japan. No other services or in-app purchases.
+
+4. Regional differences: None, except that the ad consent form appears only where required (e.g. EEA/UK).
+
+5. Regulated content / third-party material: The game is not in a regulated industry. Buildings come from Project PLATEAU by MLIT Japan (CC BY 4.0 compatible), water areas, roads and map tiles from the Geospatial Information Authority of Japan, and expressway lines from OpenStreetMap (ODbL). All allow commercial use and are credited in the app. Landmarks are simplified original 3D models.

@@ -168,4 +168,4 @@ tokyo,swing,rope,parkour,action,3d,city,japan,building,rooftop,helicopter,tag,la
 | App のプライバシー → プライバシーポリシー URL | https://techgym.jp/privacy-policy/ |
 | App のプライバシー → データの収集 | `docs/IOS_BUILD.md` の 5 章（AdMob が収集するデータ） |
 | 価格および配信状況 | 無料 |
-| App Review に関する情報 | ログイン不要。メモは `docs/IOS_BUILD.md` の 5 章「審査へのメモ」 |
+| App Review に関する情報 | ログイン不要。メモは `review-notes.txt`（`docs/IOS_BUILD.md` の 5 章「審査へのメモ」と同じ） |
