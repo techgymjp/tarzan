@@ -1580,6 +1580,8 @@ $('dexBtn').onclick = () => {
 document.querySelectorAll('#how [data-close]').forEach((b) => { b.onclick = () => withInterstitial(() => showScreen('title')); });
 document.querySelectorAll('#dexScreen [data-close]').forEach((b) => { b.onclick = () => showScreen('stages'); });
 
+// Web 版だけ、トップ画面とあそびかた画面に Google Play (Android アプリ版) へのリンクを出す (アプリの中では出さない)
+if (!NATIVE) for (const id of ['storeLinkTitle', 'storeLinkHow']) $(id).hidden = false;
 // トップ画面の下に、バージョン (アプリ版)・プライバシーポリシー・広告の設定 (EU など) を出す
 if (window.APP_VERSION && window.APP_VERSION !== 'dev') $('buildInfo').textContent = window.APP_VERSION;
 if (LANG === 'en') $('privacyLink').href = 'https://techgym.jp/privacy-policy-en/';
