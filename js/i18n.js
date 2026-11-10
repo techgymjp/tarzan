@@ -153,7 +153,9 @@ const STATIC_EN = {
   back: 'Back', dexH: 'Building collection', pauseH: 'Paused', resume: 'Resume', retryBtn: '<b>Restart</b>', quitBtn: '<b>Title</b>',
   resRetry: '<b>Play again</b>', resQuit: '<b>Title</b>', resShare: 'Share', resCopy: 'Copy result', loadingH: 'Building Tokyo…', loadingP: 'About 100,000 PLATEAU buildings',
   tJump: 'JUMP',
+  // web-only:start
   storeLink: '📱 Android app (Google Play)',
+  // web-only:end
   playBtn: 'PLAY', privacy: 'Privacy policy', adSettings: 'Ad settings', reviveH: 'Caught by an oni!', reviveWatch: 'Watch an ad to continue',
 };
 export function applyStatic() {

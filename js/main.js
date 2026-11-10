@@ -1525,7 +1525,10 @@ function toTitle() {
 // ---------- ステージの鍵 ----------
 // 首都高グランプリと同じく、最初は1番目のステージだけ。クリアすると次のステージの鍵が開く。
 // フリー (ビル図鑑あつめ) は全部のステージをクリアすると開く。テスト用に ?unlock で全部開く
-const UNLOCK_ALL = location.search.includes('unlock');
+let UNLOCK_ALL = false;
+// web-only:start (アプリのビルドでは取り除く。iOS の審査で「隠した機能」と見られないように)
+UNLOCK_ALL = location.search.includes('unlock');
+// web-only:end
 function isCleared(id) { return store.get('cleared', []).includes(id) || !!store.get('best', {})[id]; }
 function markCleared(id) {
   const c = store.get('cleared', []);
@@ -1580,8 +1583,9 @@ $('dexBtn').onclick = () => {
 document.querySelectorAll('#how [data-close]').forEach((b) => { b.onclick = () => withInterstitial(() => showScreen('title')); });
 document.querySelectorAll('#dexScreen [data-close]').forEach((b) => { b.onclick = () => showScreen('stages'); });
 
-// Web 版だけ、トップ画面とあそびかた画面に Google Play (Android アプリ版) へのリンクを出す (アプリの中では出さない)
-if (!NATIVE) for (const id of ['storeLinkTitle', 'storeLinkHow']) $(id).hidden = false;
+// web-only:start Web 版だけ、トップ画面とあそびかた画面に Google Play (Android アプリ版) へのリンクを出す (アプリのビルドには入れない)
+for (const id of ['storeLinkTitle', 'storeLinkHow']) $(id).hidden = false;
+// web-only:end
 // トップ画面の下に、バージョン (アプリ版)・プライバシーポリシー・広告の設定 (EU など) を出す
 if (window.APP_VERSION && window.APP_VERSION !== 'dev') $('buildInfo').textContent = window.APP_VERSION;
 if (LANG === 'en') $('privacyLink').href = 'https://techgym.jp/privacy-policy-en/';
@@ -1859,4 +1863,6 @@ addEventListener('resize', () => {
 showScreen('title');
 frame();
 // テスト用 (コンソールから)
+// web-only:start テスト用 (?debug)。アプリのビルドには入れない
 if (location.search.includes('debug')) window.dbg = { renderer, scene, camera, tileCache, game, player, city, cam, startGame, MISSIONS, FREE, rings: () => rings, heli, oni, fireworks, launchFireworks, tryFire, applyTod };
+// web-only:end

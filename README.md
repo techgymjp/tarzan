@@ -162,13 +162,15 @@ Capacitor 8 で Android アプリにしています（iOS 版は次の章）（�
 
 ![APK のリリース画面の QR コード](docs/apk-qr.png)
 
-- ビルドは GitHub Actions（`.github/workflows/android.yml`）。`npm ci` → `npm run build`（`scripts/build-web.js` が `www/` に Web ファイルをコピーし、`ads-config.js`・`build-info.js` を作る）→ `npx cap sync android` → `./gradlew assembleDebug`。`main` のビルドは Release `android-latest` の APK を差し替える
+- ビルドは GitHub Actions（`.github/workflows/android.yml`）。`npm ci` → `npm run build:app`（`scripts/build-web.js` が `www/` に Web ファイルをコピーし、`ads-config.js`・`build-info.js` を作る）→ `npx cap sync android` → `./gradlew assembleDebug`。`main` のビルドは Release `android-latest` の APK を差し替える
 - GitHub Secrets（`ANDROID_KEYSTORE_BASE64` など4つ）があれば、本番広告（`ADMOB_MODE=production`）で署名付き AAB も作り、Artifact `tarzan-release-aab` に上げる
 - 広告（`js/ads.js`、Google AdMob）: バナーはトップ・あそびかた・ポーズ・結果画面の下中央だけ。全画面広告は、プレイを始める・トップに戻る・ポーズからの再開・結果からもう一度／次のステージのたびに出す。リワード広告は、鬼に捕まったときに「広告を見て続ける」（最後に立っていた屋上から再開し、近くの鬼を追い払う。1ゲーム3回まで。使った回数は結果とシェア文に出る）。本番の広告ユニット ID が空の種類は本番ビルドで出さない
 - 戻るボタン: プレイ中はポーズ（ポーズ中なら再開）、トップ・結果画面ではアプリを閉じる。別のアプリに切り替えたら自動でポーズし、音も止める
 - アイコン・起動画面: `assets/` の画像から `npx @capacitor/assets generate --android` で作る
 
 ## iOS アプリ
+
+**Web 版だけの部分はアプリに入れない**: Google Play へのリンクと、テスト用の `?debug`・`?unlock` は、ソースで `<!-- web-only -->`〜`<!-- /web-only -->`（HTML）、`// web-only:start`〜`// web-only:end`（JS）で囲んであり、アプリ用のビルド（`npm run build:app`、`APP_BUILD=1`）では `scripts/build-web.js` が取り除きます（残っていればビルドを止める）。端末によって出し分ける機能や URL で動く隠しフックがアプリに入っていると、iOS の審査で「審査中に隠した機能」（Guideline 5.6）と見なされるためです（techgymjp/chabudai と同じ方式）。Web 版（GitHub Pages）は、リポジトリのファイルをそのまま公開します。Web 版だけの機能を足すときは、必ず目印で囲んでください。
 
 同じ Capacitor のプロジェクトに `ios/` を足して iOS 版にしています（Bundle ID `jp.techgym.tarzan`、iPhone 専用・横画面固定）。Mac での作業手順は `docs/IOS_BUILD.md` です。
 

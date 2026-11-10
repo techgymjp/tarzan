@@ -195,6 +195,18 @@ base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' | pbcopy
 
 ---
 
+## 8. Web 版だけの部分について（Guideline 5.6 対策）
+
+Google Play へのリンク（Web 版のトップ・あそびかた画面）と、テスト用の `?debug`・`?unlock` は、アプリのビルドに入れません。`npm run ios:sync`・`ios:release`・`android:sync` と GitHub Actions は、アプリ用のビルド（`npm run build:app`）で Web 版だけの部分を取り除いてから iOS / Android のプロジェクトにコピーします（README の「iOS アプリ」の章）。
+
+他社のストアへのリンクと、それを Apple の端末やアプリの中でだけ隠す処理がバンドルに入っていると、「審査中に隠した機能がある」（Guideline 5.6 - Developer Code of Conduct）としてリジェクトされることがあります（ちゃぶ台返しリメンバーで実際にあった）。もしこの理由でリジェクトされたら、新しいビルドに差し替えて、App Review への返信で次のように説明し、実機の画面録画を添付します。
+
+```
+Thank you for your review. The previous build included a link to our Android version on Google Play and code that hid it inside the app; both were intended only for our web version. We have removed this web-only code, together with test-only URL parameters, from the app bundle. The app now has exactly the same features during and after review, and nothing is shown or hidden depending on the device, date or region.
+```
+
+---
+
 ## つまずきやすいところ
 
 | 症状 | 対処 |
@@ -207,5 +219,6 @@ base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' | pbcopy
 | ビルドを選ぼうとしても出てこない | App Store Connect のバージョンが「1.0」のまま。1.0.0 に直して保存する |
 | 「審査用に追加できません」 | 「App 情報」のコンテンツの配信権、「App のプライバシー」のプライバシーポリシー URL が入っているか確認する |
 | 本番の広告が出ない | iOS の本番の広告ユニット ID がまだ `js/ads.js` に入っていない（空の種類は本番ビルドで出さない） |
+| 「Guideline 5.6 - Developer Code of Conduct」（審査中に隠した機能）でリジェクト | 8 章。Web 版だけの部分がアプリに入っていないか、`npm run build:app` を使っているかを確認する |
 | 本番広告とテスト広告の取り違え | App Store 用は必ず `npm run ios:release`。Xcode から実機で試すときは `npm run ios:sync` に戻す |
 | App Store の審査で「Xcode が古い」と言われる | Xcode を最新版に更新してから Archive し直す |
