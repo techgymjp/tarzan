@@ -1,6 +1,6 @@
 {
   "name": "tarzan",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "ターザン大東京 実在の東京都心のビルからビルへ、ロープ1本で飛び移る3Dアクション(Web / Android / iOS)",
   "scripts": {
