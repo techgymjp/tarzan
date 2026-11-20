@@ -170,7 +170,7 @@ Capacitor 8 で Android アプリにしています（iOS 版は次の章）（�
 
 ## iOS アプリ
 
-**Web 版だけの部分はアプリに入れない**: Google Play へのリンクと、テスト用の `?debug`・`?unlock` は、ソースで `<!-- web-only -->`〜`<!-- /web-only -->`（HTML）、`// web-only:start`〜`// web-only:end`（JS）で囲んであり、アプリ用のビルド（`npm run build:app`、`APP_BUILD=1`）では `scripts/build-web.js` が取り除きます（残っていればビルドを止める）。端末によって出し分ける機能や URL で動く隠しフックがアプリに入っていると、iOS の審査で「審査中に隠した機能」（Guideline 5.6）と見なされるためです（techgymjp/chabudai と同じ方式）。Web 版（GitHub Pages）は、リポジトリのファイルをそのまま公開します。Web 版だけの機能を足すときは、必ず目印で囲んでください。
+**Web 版だけの部分はアプリに入れない**: Google Play・App Store へのリンクと、テスト用の `?debug`・`?unlock` は、ソースで `<!-- web-only -->`〜`<!-- /web-only -->`（HTML）、`// web-only:start`〜`// web-only:end`（JS）で囲んであり、アプリ用のビルド（`npm run build:app`、`APP_BUILD=1`）では `scripts/build-web.js` が取り除きます（残っていればビルドを止める）。端末によって出し分ける機能や URL で動く隠しフックがアプリに入っていると、iOS の審査で「審査中に隠した機能」（Guideline 5.6）と見なされるためです（techgymjp/chabudai と同じ方式）。Web 版（GitHub Pages）は、リポジトリのファイルをそのまま公開します。Web 版だけの機能を足すときは、必ず目印で囲んでください。
 
 同じ Capacitor のプロジェクトに `ios/` を足して iOS 版にしています（Bundle ID `jp.techgym.tarzan`、iPhone 専用・横画面固定）。Mac での作業手順は `docs/IOS_BUILD.md` です。
 

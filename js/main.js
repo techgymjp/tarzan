@@ -1583,8 +1583,8 @@ $('dexBtn').onclick = () => {
 document.querySelectorAll('#how [data-close]').forEach((b) => { b.onclick = () => withInterstitial(() => showScreen('title')); });
 document.querySelectorAll('#dexScreen [data-close]').forEach((b) => { b.onclick = () => showScreen('stages'); });
 
-// web-only:start Web 版だけ、トップ画面とあそびかた画面に Google Play (Android アプリ版) へのリンクを出す (アプリのビルドには入れない)
-for (const id of ['storeLinkTitle', 'storeLinkHow']) $(id).hidden = false;
+// web-only:start Web 版だけ、トップ画面とあそびかた画面に Google Play (Android アプリ版)・App Store (iPhone アプリ版) へのリンクを出す (アプリのビルドには入れない)
+for (const id of ['storeLinkTitle', 'storeLinkHow', 'storeLinkIosTitle', 'storeLinkIosHow']) $(id).hidden = false;
 // web-only:end
 // トップ画面の下に、バージョン (アプリ版)・プライバシーポリシー・広告の設定 (EU など) を出す
 if (window.APP_VERSION && window.APP_VERSION !== 'dev') $('buildInfo').textContent = window.APP_VERSION;

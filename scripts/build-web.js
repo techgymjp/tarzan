@@ -10,7 +10,7 @@ for (const item of ['index.html', 'css', 'js', 'vendor', 'icon.svg']) {
   const src = path.join(root, item);
   if (fs.existsSync(src)) fs.cpSync(src, path.join(out, item), { recursive: true });
 }
-// アプリ (Android / iOS) に同梱するときは、Web 版だけの部分 (Google Play へのリンク、テスト用の ?debug・?unlock) を取り除く。
+// アプリ (Android / iOS) に同梱するときは、Web 版だけの部分 (Google Play・App Store へのリンク、テスト用の ?debug・?unlock) を取り除く。
 // iOS の審査では、端末によって出し分ける機能や URL で動く隠しフックは「審査中に隠した機能」(Guideline 5.6) と見なされるため、
 // アプリには最初から入れない (techgymjp/chabudai と同じ方式)
 if (process.env.APP_BUILD === '1') {
@@ -29,7 +29,7 @@ if (process.env.APP_BUILD === '1') {
   strip('js/i18n.js', /[ \t]*\/\/ web-only:start[\s\S]*?\/\/ web-only:end\n?/g);
   for (const rel of ['index.html', 'js/main.js', 'js/i18n.js']) {
     const text = fs.readFileSync(path.join(out, rel), 'utf8');
-    if (/play\.google\.com|web-only|location\.search|storeLink/.test(text)) {
+    if (/play\.google\.com|apps\.apple\.com|web-only|location\.search|storeLink/.test(text)) {
       console.error(`${rel} に Web 版だけの部分が残っています`);
       process.exit(1);
     }

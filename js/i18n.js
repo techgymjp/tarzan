@@ -155,6 +155,7 @@ const STATIC_EN = {
   tJump: 'JUMP',
   // web-only:start
   storeLink: '📱 Android app (Google Play)',
+  storeLinkIos: '📱 iPhone app (App Store)',
   // web-only:end
   playBtn: 'PLAY', privacy: 'Privacy policy', adSettings: 'Ad settings', reviveH: 'Caught by an oni!', reviveWatch: 'Watch an ad to continue',
 };

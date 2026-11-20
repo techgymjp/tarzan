@@ -224,3 +224,4 @@ body.app .panel { max-height: calc(100vh - 82px); }
 .storeRow { margin: 10px 0 0; text-align: center; }
 .storeLink { color: #9cd2ff; font-size: 14px; font-weight: 700; }
 .storeLink[hidden] { display: none; }
+.storeSep { margin: 0 8px; opacity: 0.5; }
