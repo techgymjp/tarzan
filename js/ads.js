@@ -27,7 +27,7 @@ window.Ads = (() => {
       },
       // 本番の広告ユニット (AdMob の iOS アプリ「ターザン大東京」)
       production: {
-        interstitial: 'ca-app-pub-6411535997477460/5735745589',
+        interstitial: 'ca-app-pub-6411535997477460/6037720220',
         rewarded: 'ca-app-pub-6411535997477460/3109582247',
         banner: 'ca-app-pub-6411535997477460/7298831005',
       },
